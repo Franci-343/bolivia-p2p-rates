@@ -1,10 +1,10 @@
-Set-Content -Path .gitignore -Value @'
 # Target (Directorio de compilación de Maven)
 target/
 *.jar
 *.war
 *.ear
 *.nar
+dependency-reduced-pom.xml
 
 # Logs y bases de datos incrustadas o temporales
 *.log
@@ -29,4 +29,3 @@ target/
 Thumbs.db
 desktop.ini
 .DS_Store
-'@
