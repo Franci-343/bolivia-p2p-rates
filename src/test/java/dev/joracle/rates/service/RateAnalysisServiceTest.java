@@ -28,6 +28,10 @@ class RateAnalysisServiceTest {
 
         assertNotNull(summary);
         assertEquals(0, summary.sampleCount());
+        assertEquals(0, summary.totalReceived());
+        assertEquals(0, summary.validCount());
+        assertEquals(0, summary.discardedCount());
+        assertEquals(BigDecimal.ZERO, summary.referencePrice());
         assertEquals(BigDecimal.ZERO, summary.averagePrice());
         assertEquals(BigDecimal.ZERO, summary.medianPrice());
         assertTrue(summary.topOffers().isEmpty());
@@ -46,12 +50,17 @@ class RateAnalysisServiceTest {
         MarketSummary summary = analysisService.analyzeMarket(offers, TradeType.BUY, "BOB", "USDT");
 
         assertNotNull(summary);
+        assertEquals(3, summary.totalReceived());
+        assertEquals(3, summary.validCount());
+        assertEquals(0, summary.discardedCount());
         assertEquals(3, summary.sampleCount());
+
         // Min = 12.00, Max = 12.50
         assertEquals(new BigDecimal("12.00"), summary.minPrice());
         assertEquals(new BigDecimal("12.50"), summary.maxPrice());
-        // Median = 12.10
+        // Median / Reference = 12.10
         assertEquals(new BigDecimal("12.10"), summary.medianPrice());
+        assertEquals(new BigDecimal("12.10"), summary.referencePrice());
         // Sum = 36.60, Avg = 12.20
         assertEquals(new BigDecimal("12.20"), summary.averagePrice());
 
@@ -62,7 +71,6 @@ class RateAnalysisServiceTest {
 
         // Bank distribution check
         assertFalse(summary.bankSummaries().isEmpty());
-        // Banco Unión appears in 2 offers
         assertEquals("Banco Unión", summary.bankSummaries().get(0).bankName());
         assertEquals(2, summary.bankSummaries().get(0).offerCount());
     }
@@ -79,7 +87,7 @@ class RateAnalysisServiceTest {
         MarketSummary summary = analysisService.analyzeMarket(offers, TradeType.SELL, "BOB", "USDT");
 
         assertNotNull(summary);
-        assertEquals(3, summary.sampleCount());
+        assertEquals(3, summary.validCount());
         // Top offer for SELL should be BuyerHigh (11.95)
         assertEquals("BuyerHigh", summary.topOffers().get(0).advertiserNick());
         assertEquals("BuyerMid", summary.topOffers().get(1).advertiserNick());
@@ -100,5 +108,32 @@ class RateAnalysisServiceTest {
 
         // Median of (12.20 + 12.40)/2 = 12.30
         assertEquals(new BigDecimal("12.30"), summary.medianPrice());
+        assertEquals(new BigDecimal("12.30"), summary.referencePrice());
+    }
+
+    @Test
+    @DisplayName("Should filter out duplicates by advNo and invalid prices or limits")
+    void shouldFilterDuplicatesAndInvalidOffers() {
+        List<P2POffer> offers = List.of(
+                // Valid offer
+                new P2POffer("100", TradeType.BUY, "ValidSeller", new BigDecimal("12.00"), new BigDecimal("100"), new BigDecimal("5000"), 10, 1.0, List.of("BNB")),
+                // Duplicate of advNo 100
+                new P2POffer("100", TradeType.BUY, "DuplicateSeller", new BigDecimal("12.00"), new BigDecimal("100"), new BigDecimal("5000"), 10, 1.0, List.of("BNB")),
+                // Invalid negative or zero price
+                new P2POffer("101", TradeType.BUY, "BadPrice", BigDecimal.ZERO, new BigDecimal("100"), new BigDecimal("5000"), 10, 1.0, List.of("BNB")),
+                // Inconsistent limits (min > max)
+                new P2POffer("102", TradeType.BUY, "BadLimits", new BigDecimal("12.10"), new BigDecimal("10000"), new BigDecimal("500"), 10, 1.0, List.of("BNB")),
+                // Second valid offer
+                new P2POffer("103", TradeType.BUY, "SecondValid", new BigDecimal("12.04"), new BigDecimal("50"), new BigDecimal("1000"), 10, 1.0, List.of("Banco Union"))
+        );
+
+        MarketSummary summary = analysisService.analyzeMarket(offers, TradeType.BUY, "BOB", "USDT");
+
+        assertEquals(5, summary.totalReceived());
+        assertEquals(2, summary.validCount());
+        assertEquals(3, summary.discardedCount());
+        assertEquals(2, summary.topOffers().size());
+        assertEquals("ValidSeller", summary.topOffers().get(0).advertiserNick());
+        assertEquals("SecondValid", summary.topOffers().get(1).advertiserNick());
     }
 }

@@ -8,6 +8,7 @@ import io.javalin.config.RoutesConfig;
 import io.javalin.http.Context;
 import io.javalin.http.HttpStatus;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -15,7 +16,10 @@ import java.util.Objects;
 
 /**
  * REST controller exposing endpoints for consumers and developers.
- * Follows Spring-style controller structuring adapted to Javalin 7.
+ * <p>
+ * Core Architecture Rule:
+ * All consumer requests read strictly from {@link RateRepository} (In-Memory buffer / Oracle DB).
+ * Zero requests are forwarded to Binance when clients query this API.
  */
 public class RateController {
 
@@ -31,17 +35,20 @@ public class RateController {
      * Registers all routes and global exception handlers on Javalin 7's RoutesConfig.
      */
     public void registerRoutes(RoutesConfig routes) {
-        // Health check
+        // Health & Status endpoints
         routes.get("/health", this::healthCheck);
+        routes.get("/api/v1/status", this::getStatus);
 
-        // Core rate endpoints
+        // Core rate endpoints (all served strictly from repository)
         routes.get("/api/v1/rates/latest", this::getLatestRates);
         routes.get("/api/v1/rates/buy", this::getBuyRates);
         routes.get("/api/v1/rates/sell", this::getSellRates);
         routes.get("/api/v1/rates/history", this::getRecentHistory);
+
+        // Protected refresh with strict cooldown
         routes.post("/api/v1/rates/refresh", this::refreshRates);
 
-        // Exception handlers
+        // Global Exception Handlers
         routes.exception(BinanceApiException.class, (e, ctx) -> {
             ctx.status(HttpStatus.BAD_GATEWAY).json(Map.of(
                     "error", "Binance API Communication Failure",
@@ -68,12 +75,33 @@ public class RateController {
         ));
     }
 
+    private void getStatus(Context ctx) {
+        rateRepository.findLatest().ifPresentOrElse(
+                latest -> {
+                    long ageSeconds = Duration.between(latest.timestamp(), Instant.now()).getSeconds();
+                    ctx.status(HttpStatus.OK).json(Map.of(
+                            "status", "UP",
+                            "cycleId", latest.cycleId(),
+                            "lastCycleStatus", latest.status(),
+                            "isStale", latest.stale(),
+                            "dataAgeSeconds", ageSeconds,
+                            "lastCycleDurationMs", latest.durationMs(),
+                            "capturedAt", latest.timestamp().toString()
+                    ));
+                },
+                () -> ctx.status(HttpStatus.OK).json(Map.of(
+                        "status", "INITIALIZING",
+                        "message", "Awaiting first scheduled collection cycle"
+                ))
+        );
+    }
+
     private void getLatestRates(Context ctx) {
         rateRepository.findLatest().ifPresentOrElse(
                 ctx::json,
                 () -> ctx.status(HttpStatus.SERVICE_UNAVAILABLE).json(Map.of(
                         "status", "PENDING",
-                        "message", "First market snapshot is being collected, please retry in a few seconds."
+                        "message", "El primer snapshot de mercado se está recolectando. Reintente en unos segundos."
                 ))
         );
     }
@@ -83,7 +111,7 @@ public class RateController {
                 ctx::json,
                 () -> ctx.status(HttpStatus.SERVICE_UNAVAILABLE).json(Map.of(
                         "status", "PENDING",
-                        "message", "Market data not yet available."
+                        "message", "Datos de mercado aún no disponibles."
                 ))
         );
     }
@@ -93,7 +121,7 @@ public class RateController {
                 ctx::json,
                 () -> ctx.status(HttpStatus.SERVICE_UNAVAILABLE).json(Map.of(
                         "status", "PENDING",
-                        "message", "Market data not yet available."
+                        "message", "Datos de mercado aún no disponibles."
                 ))
         );
     }
@@ -105,7 +133,18 @@ public class RateController {
     }
 
     private void refreshRates(Context ctx) {
-        RateSnapshot fresh = pollerService.pollOnce();
-        ctx.status(HttpStatus.OK).json(fresh);
+        RatePollerService.RefreshResult result = pollerService.refreshWithCooldown();
+        if (!result.executed()) {
+            ctx.header("X-Cache", "HIT-COOLDOWN");
+            ctx.status(HttpStatus.OK).json(Map.of(
+                    "status", "COOLDOWN_ACTIVE",
+                    "message", result.message(),
+                    "cooldownRemainingSeconds", result.cooldownRemainingSeconds(),
+                    "cachedSnapshot", result.snapshot() != null ? result.snapshot() : Map.of()
+            ));
+        } else {
+            ctx.header("X-Cache", "MISS-FRESH");
+            ctx.status(HttpStatus.OK).json(result.snapshot());
+        }
     }
 }

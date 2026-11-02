@@ -2,22 +2,26 @@ package dev.joracle.rates.config;
 
 /**
  * Application configuration loaded from environment variables with sensible defaults.
+ * Follows the recommendations in docs/PLAN_BOLIVIA_P2P_RATES.md.
  */
 public record AppConfig(
         int serverPort,
         int pollIntervalSeconds,
+        int minRefreshCooldownSeconds,
         int binanceRows,
         String fiatCurrency,
         String assetCurrency
 ) {
     public static AppConfig fromEnv() {
         int serverPort = getEnvAsInt("PORT", 8080);
-        int pollIntervalSeconds = getEnvAsInt("POLL_INTERVAL_SECONDS", 60);
+        // Default to 600s (10 min) as recommended in PLAN_BOLIVIA_P2P_RATES.md to protect against WAF blocks
+        int pollIntervalSeconds = getEnvAsInt("POLL_INTERVAL_SECONDS", 600);
+        int cooldownSeconds = getEnvAsInt("REFRESH_COOLDOWN_SECONDS", 60);
         int binanceRows = getEnvAsInt("BINANCE_FETCH_ROWS", 10);
         String fiat = getEnvOrDefault("FIAT_CURRENCY", "BOB");
         String asset = getEnvOrDefault("ASSET_CURRENCY", "USDT");
 
-        return new AppConfig(serverPort, pollIntervalSeconds, binanceRows, fiat, asset);
+        return new AppConfig(serverPort, pollIntervalSeconds, cooldownSeconds, binanceRows, fiat, asset);
     }
 
     private static int getEnvAsInt(String key, int defaultValue) {

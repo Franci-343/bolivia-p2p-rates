@@ -55,13 +55,14 @@ public class App {
         app.start(config.serverPort());
 
         log.info("Server started on port http://localhost:{}", config.serverPort());
-        log.info("Available endpoints:");
+        log.info("Available endpoints (100% served from Database / InMemory repository):");
         log.info("  GET  /health");
+        log.info("  GET  /api/v1/status");
         log.info("  GET  /api/v1/rates/latest");
         log.info("  GET  /api/v1/rates/buy");
         log.info("  GET  /api/v1/rates/sell");
         log.info("  GET  /api/v1/rates/history");
-        log.info("  POST /api/v1/rates/refresh");
+        log.info("  POST /api/v1/rates/refresh (protected with cooldown)");
 
         // 4. Start Background Poller Worker
         pollerService.start();
