@@ -1,0 +1,32 @@
+Set-Content -Path .gitignore -Value @'
+# Target (Directorio de compilación de Maven)
+target/
+*.jar
+*.war
+*.ear
+*.nar
+
+# Logs y bases de datos incrustadas o temporales
+*.log
+.data/
+
+# IDEs (Eclipse, VS Code, IntelliJ)
+.classpath
+.project
+.settings/
+.factorypath
+.vscode/
+.idea/
+*.iml
+*.iws
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Archivos del sistema
+Thumbs.db
+desktop.ini
+.DS_Store
+'@
