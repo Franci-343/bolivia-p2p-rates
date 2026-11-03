@@ -6,7 +6,7 @@ After=network.target
 Type=simple
 User=ubuntu
 WorkingDirectory=/home/ubuntu/bolivia-p2p-rates
-ExecStart=/usr/bin/java -Xms96m -Xmx256m -XX:MaxMetaspaceSize=96m -XX:+UseSerialGC -jar /home/ubuntu/bolivia-p2p-rates/bolivia-p2p-rates.jar
+ExecStart=/home/ubuntu/.sdkman/candidates/java/current/bin/java -Xms96m -Xmx256m -XX:MaxMetaspaceSize=96m -XX:+UseSerialGC -jar /home/ubuntu/bolivia-p2p-rates/bolivia-p2p-rates.jar
 
 # Auto-recovery
 Restart=always
