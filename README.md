@@ -53,6 +53,7 @@ Todos los endpoints leen directamente del repositorio / base de datos local:
 | `BINANCE_FETCH_ROWS` | `10` | Cantidad de ofertas a muestrear por cada lado (compra/venta). |
 | `FIAT_CURRENCY` | `BOB` | Moneda fiat local. |
 | `ASSET_CURRENCY` | `USDT` | Criptoactivo consultado. |
+| `SQLITE_DB_PATH` | `database/rates.db` | Ruta del archivo de base de datos SQLite embebida. |
 
 ---
 
@@ -80,34 +81,28 @@ POLL_INTERVAL_SECONDS=60 java -jar target/bolivia-p2p-rates-0.1.0-SNAPSHOT.jar
 
 ---
 
-## Ejemplo de Salida en Logs
+## Salida en Logs (Operacional)
+
+El servicio utiliza logs concisos y estructurados, enviando toda la información histórica a la base de datos SQLite:
 
 ```text
-========================================================================================
-  BINANCE P2P MONITOR [USDT / BOB] - CICLO #0001 (2026-11-02 16:42:53 Hora Bolivia)
-  Estado: OK | Duración: 2512 ms | Próximo ciclo en: 600 s | Datos: FRESCOS
-----------------------------------------------------------------------------------------
-  COMPRA (Usuario compra USDT pagando Bolivianos):
-   * Referencia (Mediana) : 12.01 BOB
-   * Promedio muestral    : 12.01 BOB
-   * Rango observado      : [12.00 - 12.01] BOB
-   * Muestra de anuncios  : 10 recibidos (10 válidos, 0 descartados)
-   * Métodos observados   : Banco Económico (~12.01), Transferencia Bancaria (~12.01), Banco de Crédito (BCP) (~12.01), Banco Ganadero (~12.01), Banco Unión (~12.01)
-----------------------------------------------------------------------------------------
-  VENTA (Usuario vende USDT recibiendo Bolivianos):
-   * Referencia (Mediana) : 11.96 BOB
-   * Promedio muestral    : 11.98 BOB
-   * Rango observado      : [11.96 - 12.09] BOB
-   * Muestra de anuncios  : 10 recibidos (10 válidos, 0 descartados)
-   * Métodos observados   : Banco Económico (~11.98), Banco FIE (~11.98), Banco Unión (~11.96), Banco Ganadero (~11.99), Banco BNB (~11.97)
-========================================================================================
+[main] INFO dev.joracle.rates.App - Starting Bolivia P2P Rates Service (Java 25 + Javalin 7 + SQLite)...
+[main] INFO dev.joracle.rates.db.DatabaseManager - Initialized DatabaseManager with URL: jdbc:sqlite:D:/Proyectos/bots/bolivia-p2p-rates/database/rates.db
+[main] INFO dev.joracle.rates.db.DatabaseMigrator - Found 2 pending migration(s) to apply.
+[main] INFO dev.joracle.rates.db.DatabaseMigrator - Migration 1 (001_create_rate_snapshots.sql) successfully applied.
+[main] INFO dev.joracle.rates.db.DatabaseMigrator - Migration 2 (002_create_api_clients.sql) successfully applied.
+[main] INFO dev.joracle.rates.App - Server started on port http://localhost:8080
+[rate-poller-worker] INFO dev.joracle.rates.service.RatePollerService - Ciclo #1 completado en 1845ms [OK]. COMPRA: 12.01 BOB | VENTA: 11.96 BOB. Persistido en base de datos.
 ```
 
 ---
 
-## Fase 2 (Oracle Autonomous Database)
+## Persistencia en SQLite y Versionado SQL (`database/`)
 
-La capa de datos está desacoplada mediante la interfaz [`RateRepository`](file:///D:/Proyectos/bots/bolivia-p2p-rates/src/main/java/dev/joracle/rates/repository/RateRepository.java). Cuando se disponga de la base de datos Oracle:
-1. Se añadirá `OracleRateRepository implements RateRepository`.
-2. En `App.java`, se sustituye `new InMemoryRateRepository(100)` por la implementación de Oracle.
-3. El resto del sistema (recolector, Javalin, controladores y lógica financiera) continuará funcionando sin modificaciones.
+El almacenamiento está respaldado por SQLite embebido en modo **WAL (Write-Ahead Logging)**, garantizando que lecturas masivas de la API no se bloqueen con las escrituras del recolector.
+
+Los cambios en la base de datos se versionan mediante scripts SQL en la carpeta `database/`:
+* `001_create_rate_snapshots.sql`: Crea la tabla `rate_snapshots` e índices para histórico y consultas rápidas.
+* `002_create_api_clients.sql`: Crea la tabla `api_clients` para control de API Keys y semillas iniciales.
+
+El ejecutor interno `DatabaseMigrator` detecta y aplica automáticamente cualquier nueva migración al arrancar el servicio.

@@ -1,0 +1,75 @@
+name: Build and Deploy to Oracle Cloud
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: # Allows manual trigger from GitHub UI
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 25 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '25'
+          cache: 'maven'
+
+      - name: Build Fat JAR and Run Tests
+        run: mvn clean package --batch-mode
+
+      - name: Ensure Target Directory Exists on Server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_PORT || 22 }}
+          script: |
+            mkdir -p /home/ubuntu/bolivia-p2p-rates/database
+
+      - name: Copy JAR to Oracle Server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_PORT || 22 }}
+          source: "target/bolivia-p2p-rates-0.1.0-SNAPSHOT.jar"
+          target: "/home/ubuntu/bolivia-p2p-rates/"
+          strip_components: 1
+
+      - name: Copy Database Migration Scripts to Server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_PORT || 22 }}
+          source: "database/*.sql"
+          target: "/home/ubuntu/bolivia-p2p-rates/database/"
+          strip_components: 1
+
+      - name: Rename JAR and Restart Systemd Service
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_PORT || 22 }}
+          script: |
+            cd /home/ubuntu/bolivia-p2p-rates
+            # Keep consistent jar name
+            mv -f bolivia-p2p-rates-0.1.0-SNAPSHOT.jar bolivia-p2p-rates.jar
+            
+            # Restart systemd daemon service
+            sudo systemctl restart bolivia-rates
+            
+            # Wait 3 seconds and verify service status
+            sleep 3
+            sudo systemctl status bolivia-rates --no-pager

@@ -10,7 +10,8 @@ public record AppConfig(
         int minRefreshCooldownSeconds,
         int binanceRows,
         String fiatCurrency,
-        String assetCurrency
+        String assetCurrency,
+        String databasePath
 ) {
     public static AppConfig fromEnv() {
         int serverPort = getEnvAsInt("PORT", 8080);
@@ -20,8 +21,9 @@ public record AppConfig(
         int binanceRows = getEnvAsInt("BINANCE_FETCH_ROWS", 10);
         String fiat = getEnvOrDefault("FIAT_CURRENCY", "BOB");
         String asset = getEnvOrDefault("ASSET_CURRENCY", "USDT");
+        String dbPath = getEnvOrDefault("SQLITE_DB_PATH", "database/rates.db");
 
-        return new AppConfig(serverPort, pollIntervalSeconds, cooldownSeconds, binanceRows, fiat, asset);
+        return new AppConfig(serverPort, pollIntervalSeconds, cooldownSeconds, binanceRows, fiat, asset, dbPath);
     }
 
     private static int getEnvAsInt(String key, int defaultValue) {

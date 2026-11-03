@@ -3,7 +3,6 @@ package dev.joracle.rates.service;
 import dev.joracle.rates.client.BinanceApiException;
 import dev.joracle.rates.client.BinanceP2PClient;
 import dev.joracle.rates.config.AppConfig;
-import dev.joracle.rates.model.BankRateSummary;
 import dev.joracle.rates.model.MarketSummary;
 import dev.joracle.rates.model.P2POffer;
 import dev.joracle.rates.model.RateSnapshot;
@@ -14,8 +13,6 @@ import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.Executors;
@@ -26,7 +23,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Worker service responsible for scheduled polling, analysis orchestration,
- * repository persistence, and visual log presentation.
+ * repository persistence, and health status tracking.
  * <p>
  * Core Architecture Rule:
  * This poller is the ONLY component allowed to make outbound requests to Binance.
@@ -35,8 +32,6 @@ import java.util.concurrent.atomic.AtomicLong;
 public class RatePollerService implements AutoCloseable {
 
     private static final Logger log = LoggerFactory.getLogger(RatePollerService.class);
-    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
-            .withZone(ZoneId.of("America/La_Paz"));
 
     private final BinanceP2PClient binanceClient;
     private final RateAnalysisService analysisService;
@@ -189,57 +184,14 @@ public class RatePollerService implements AutoCloseable {
     }
 
     private void logMarketSnapshot(RateSnapshot snapshot) {
-        String formattedTime = TIME_FORMATTER.format(snapshot.timestamp());
-        MarketSummary buy = snapshot.buyMarket();
-        MarketSummary sell = snapshot.sellMarket();
-
-        StringBuilder sb = new StringBuilder();
-        sb.append("\n========================================================================================\n");
-        sb.append(String.format("  BINANCE P2P MONITOR [%s / %s] - CICLO #%04d (%s Hora Bolivia)\n",
-                config.assetCurrency(), config.fiatCurrency(), snapshot.cycleId(), formattedTime));
-        sb.append(String.format("  Estado: %s | Duración: %d ms | Próximo ciclo en: %d s | Datos: %s\n",
-                snapshot.status(), snapshot.durationMs(), config.pollIntervalSeconds(),
-                snapshot.stale() ? "DESACTUALIZADOS (STALE)" : "FRESCOS"));
-        sb.append("----------------------------------------------------------------------------------------\n");
-
-        // Buy section
-        sb.append(" 🟢 COMPRA (Usuario compra USDT pagando Bolivianos):\n");
-        sb.append(String.format("   * Referencia (Mediana) : %s %s\n", buy.referencePrice(), buy.fiat()));
-        sb.append(String.format("   * Promedio muestral    : %s %s\n", buy.averagePrice(), buy.fiat()));
-        sb.append(String.format("   * Rango observado      : [%s - %s] %s\n", buy.minPrice(), buy.maxPrice(), buy.fiat()));
-        sb.append(String.format("   * Muestra de anuncios  : %d recibidos (%d válidos, %d descartados)\n",
-                buy.totalReceived(), buy.validCount(), buy.discardedCount()));
-        sb.append("   * Métodos observados   : ").append(formatBankList(buy.bankSummaries())).append("\n");
-
-        sb.append("----------------------------------------------------------------------------------------\n");
-
-        // Sell section
-        sb.append(" 🔴 VENTA (Usuario vende USDT recibiendo Bolivianos):\n");
-        sb.append(String.format("   * Referencia (Mediana) : %s %s\n", sell.referencePrice(), sell.fiat()));
-        sb.append(String.format("   * Promedio muestral    : %s %s\n", sell.averagePrice(), sell.fiat()));
-        sb.append(String.format("   * Rango observado      : [%s - %s] %s\n", sell.minPrice(), sell.maxPrice(), sell.fiat()));
-        sb.append(String.format("   * Muestra de anuncios  : %d recibidos (%d válidos, %d descartados)\n",
-                sell.totalReceived(), sell.validCount(), sell.discardedCount()));
-        sb.append("   * Métodos observados   : ").append(formatBankList(sell.bankSummaries())).append("\n");
-
-        sb.append("========================================================================================");
-
-        log.info("{}", sb);
-    }
-
-    private String formatBankList(List<BankRateSummary> bankSummaries) {
-        if (bankSummaries == null || bankSummaries.isEmpty()) {
-            return "Ninguno observado";
-        }
-        StringBuilder b = new StringBuilder();
-        int count = 0;
-        for (BankRateSummary bs : bankSummaries) {
-            if (count > 0) b.append(", ");
-            b.append(bs.bankName()).append(" (~").append(bs.averagePrice()).append(")");
-            count++;
-            if (count >= 5) break; // Top 5
-        }
-        return b.toString();
+        log.info("Ciclo #{} completado en {}ms [{}]. COMPRA: {} {} | VENTA: {} {}. Persistido en base de datos.",
+                snapshot.cycleId(),
+                snapshot.durationMs(),
+                snapshot.status(),
+                snapshot.buyMarket().referencePrice(),
+                snapshot.buyMarket().fiat(),
+                snapshot.sellMarket().referencePrice(),
+                snapshot.sellMarket().fiat());
     }
 
     @Override

@@ -1,0 +1,26 @@
+[Unit]
+Description=Bolivia P2P Rates Monitor Service
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/bolivia-p2p-rates
+ExecStart=/usr/bin/java -Xms96m -Xmx256m -XX:MaxMetaspaceSize=96m -XX:+UseSerialGC -jar /home/ubuntu/bolivia-p2p-rates/bolivia-p2p-rates.jar
+
+# Auto-recovery
+Restart=always
+RestartSec=5
+
+# Environment Configuration
+Environment=PORT=8080
+Environment=POLL_INTERVAL_SECONDS=600
+Environment=SQLITE_DB_PATH=database/rates.db
+Environment=FIAT_CURRENCY=BOB
+Environment=ASSET_CURRENCY=USDT
+
+# Hard memory protection for 1GB RAM VM
+MemoryMax=450M
+
+[Install]
+WantedBy=multi-user.target

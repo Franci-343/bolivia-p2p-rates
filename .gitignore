@@ -9,6 +9,13 @@ dependency-reduced-pom.xml
 # Logs y bases de datos incrustadas o temporales
 *.log
 .data/
+data/
+database/*.db
+database/*.db-shm
+database/*.db-wal
+*.db
+*.db-shm
+*.db-wal
 
 # IDEs (Eclipse, VS Code, IntelliJ)
 .classpath
