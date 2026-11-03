@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="es" class="dark scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bolivia P2P Rates — Portal de Desarrolladores & Wiki de la API</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        slate: {
+                            850: '#151f32',
+                            950: '#070d19'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- HTMX 2.0.4 CDN -->
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+
+    <style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased selection:bg-blue-600 selection:text-white">
+
+    <!-- Top Sticky Navigation Bar -->
+    <header class="bg-slate-900/90 backdrop-blur-md border-b border-slate-800 sticky top-0 z-40 shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <span class="text-2xl">🇧🇴</span>
+                <div>
+                    <a href="/" class="text-base font-black text-white tracking-tight flex items-center gap-2">
+                        <span>Bolivia P2P Rates</span>
+                        <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">API REST</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Ticker live rates preview if available -->
+            <div th:if="${snapshot != null and snapshot.buyMarket() != null and snapshot.sellMarket() != null}" class="hidden md:flex items-center gap-4 text-xs bg-slate-950/70 border border-slate-800 px-3.5 py-1.5 rounded-full">
+                <span class="text-slate-400">Mercado actual:</span>
+                <span class="text-emerald-400 font-mono font-semibold">Compra: <span th:text="${snapshot.buyMarket().referencePrice()}">14.85</span> BOB</span>
+                <span class="text-slate-600">|</span>
+                <span class="text-rose-400 font-mono font-semibold">Venta: <span th:text="${snapshot.sellMarket().referencePrice()}">14.92</span> BOB</span>
+            </div>
+
+            <nav class="flex items-center gap-2 sm:gap-3 text-xs">
+                <a href="#obtener-key" class="hidden sm:inline-block px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold transition shadow-sm">
+                    Obtener API Key
+                </a>
+                <a href="#wiki" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition font-medium">
+                    Wiki & Endpoints
+                </a>
+                <a href="#playground" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition font-medium">
+                    Playground
+                </a>
+                <a href="/admin" class="px-2.5 py-1.5 rounded-lg text-slate-400 hover:text-blue-400 hover:bg-slate-800/80 transition">
+                    Admin
+                </a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="relative overflow-hidden pt-12 pb-14 border-b border-slate-900 bg-gradient-to-b from-slate-900/50 to-slate-950">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 text-center space-y-6">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                <span>Servicio Activo &bull; Actualización en Tiempo Real</span>
+            </div>
+
+            <h1 class="text-3xl sm:text-5xl font-black text-white tracking-tight leading-tight">
+                La API de Tasas P2P para Bolivia <br class="hidden sm:inline">
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-sky-300 to-emerald-400">
+                    rápida, confiable y abierta.
+                </span>
+            </h1>
+
+            <p class="max-w-2xl mx-auto text-sm sm:text-base text-slate-400 leading-relaxed">
+                Integra cotizaciones reales de USDT/BOB en tus bots de Telegram, aplicaciones móviles o sistemas contables. Respuestas en menos de 2 milisegundos gracias a nuestro motor de persistencia local en SQLite.
+            </p>
+
+            <div class="flex flex-wrap items-center justify-center gap-3 pt-2">
+                <a href="#obtener-key" class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm transition shadow-lg shadow-blue-600/20 flex items-center gap-2">
+                    <span>🔑 Generar API Key Gratis</span>
+                    <span class="text-xs font-normal opacity-80">(10 RPM)</span>
+                </a>
+                <a href="#playground" class="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-semibold text-sm transition flex items-center gap-2">
+                    <span>⚡ Probar en Vivo</span>
+                </a>
+            </div>
+
+            <!-- Features Quick Badges -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-8 max-w-3xl mx-auto text-left">
+                <div class="p-3 rounded-xl bg-slate-900/70 border border-slate-800/80">
+                    <span class="text-blue-400 text-lg">⚡</span>
+                    <h2 class="text-xs font-bold text-white mt-1">&lt; 2 ms Latencia</h2>
+                    <p class="text-[11px] text-slate-400 mt-0.5">Respuestas instantáneas en memoria y SQLite.</p>
+                </div>
+                <div class="p-3 rounded-xl bg-slate-900/70 border border-slate-800/80">
+                    <span class="text-emerald-400 text-lg">🏦</span>
+                    <h2 class="text-xs font-bold text-white mt-1">Por Bancos</h2>
+                    <p class="text-[11px] text-slate-400 mt-0.5">Unión, BISA, BNB, Mercantil, Sol y más.</p>
+                </div>
+                <div class="p-3 rounded-xl bg-slate-900/70 border border-slate-800/80">
+                    <span class="text-purple-400 text-lg">🛡️</span>
+                    <h2 class="text-xs font-bold text-white mt-1">Alta Resiliencia</h2>
+                    <p class="text-[11px] text-slate-400 mt-0.5">Sin saturar Binance. Polling desacoplado.</p>
+                </div>
+                <div class="p-3 rounded-xl bg-slate-900/70 border border-slate-800/80">
+                    <span class="text-amber-400 text-lg">✨</span>
+                    <h2 class="text-xs font-bold text-white mt-1">100% Gratuito</h2>
+                    <p class="text-[11px] text-slate-400 mt-0.5">Genera tu llave y empieza en 5 segundos.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Container -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-16">
+
+        <!-- SECTION 1: Self-Service Key Generator Card -->
+        <section id="obtener-key" class="max-w-3xl mx-auto scroll-mt-24">
+            <div class="bg-gradient-to-b from-slate-900 to-slate-900/80 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
+                <div class="absolute -right-12 -top-12 w-48 h-48 bg-blue-600/10 rounded-full blur-3xl pointer-events-none"></div>
+
+                <div class="flex items-start justify-between gap-4 mb-6">
+                    <div>
+                        <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 mb-2">
+                            <span>Plan Free Desarrollador</span>
+                        </div>
+                        <h2 class="text-xl sm:text-2xl font-black text-white tracking-tight">Crea tu API Key de Acceso</h2>
+                        <p class="text-xs text-slate-400 mt-1">
+                            Sin tarjetas ni registros complejos. Asignamos inmediatamente <strong>10 peticiones/minuto</strong> para cuidar los recursos de nuestro servidor Always Free.
+                        </p>
+                    </div>
+                    <span class="text-3xl hidden sm:block">🔑</span>
+                </div>
+
+                <!-- HTMX Form for Key Generation -->
+                <form hx-post="/portal/keys"
+                      hx-target="#public-key-target"
+                      hx-swap="innerHTML"
+                      class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1.5">
+                            Nombre de tu Aplicación o Proyecto:
+                        </label>
+                        <div class="flex flex-col sm:flex-row gap-2">
+                            <input type="text" name="clientName" required
+                                   placeholder="Ej: MiBotDeTasasTelegram, AppFinanzas, Juan"
+                                   maxlength="50"
+                                   class="flex-1 bg-slate-950 border border-slate-700 rounded-xl text-sm text-white px-4 py-2.5 focus:border-blue-500 focus:outline-none transition">
+                            <button type="submit"
+                                    class="py-2.5 px-6 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm rounded-xl transition shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 shrink-0">
+                                <span>Generar API Key</span>
+                                <span class="htmx-indicator animate-spin">⟳</span>
+                            </button>
+                        </div>
+                        <p class="text-[11px] text-slate-500 mt-1.5">
+                            * Máximo 5 llaves por hora por dirección IP para prevenir abusos.
+                        </p>
+                    </div>
+                </form>
+
+                <!-- Target Container for the Result fragment -->
+                <div id="public-key-target" class="mt-5"></div>
+            </div>
+        </section>
+
+        <!-- SECTION 2: Live Interactive API Playground -->
+        <section id="playground" class="scroll-mt-24">
+            <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-6 border-b border-slate-800">
+                    <div>
+                        <h2 class="text-xl font-black text-white tracking-tight flex items-center gap-2">
+                            <span>⚡ Playground en Vivo</span>
+                            <span class="text-xs font-semibold text-slate-400 bg-slate-800 px-2.5 py-0.5 rounded-full border border-slate-700">Test en Navegador</span>
+                        </h2>
+                        <p class="text-xs text-slate-400 mt-1">Prueba los endpoints en tiempo real enviando tu API Key directamente desde esta página.</p>
+                    </div>
+                </div>
+
+                <!-- Playground Controls -->
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-3 mb-4">
+                    <div class="md:col-span-3">
+                        <label class="block text-[11px] font-semibold text-slate-400 mb-1">Método & Endpoint</label>
+                        <select id="playgroundEndpoint" class="w-full bg-slate-950 border border-slate-700 rounded-xl text-xs sm:text-sm text-white px-3 py-2.5 focus:border-blue-500 focus:outline-none font-mono">
+                            <option value="/api/v1/rates/latest">GET /api/v1/rates/latest</option>
+                            <option value="/api/v1/rates/buy">GET /api/v1/rates/buy</option>
+                            <option value="/api/v1/rates/sell">GET /api/v1/rates/sell</option>
+                            <option value="/api/v1/rates/history">GET /api/v1/rates/history</option>
+                            <option value="/api/v1/status">GET /api/v1/status (Público)</option>
+                            <option value="/health">GET /health (Público)</option>
+                        </select>
+                    </div>
+
+                    <div class="md:col-span-6">
+                        <label class="block text-[11px] font-semibold text-slate-400 mb-1">
+                            Tu API Key (o usa la demo preconfigurada)
+                        </label>
+                        <input type="text" id="playgroundApiKey"
+                               th:value="${defaultDemoKey}"
+                               placeholder="bolivia_live_..."
+                               class="w-full bg-slate-950 border border-slate-700 rounded-xl text-xs sm:text-sm text-emerald-400 px-3.5 py-2.5 focus:border-blue-500 focus:outline-none font-mono">
+                    </div>
+
+                    <div class="md:col-span-3 flex items-end">
+                        <button type="button" onclick="executePlaygroundRequest()"
+                                class="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm rounded-xl transition shadow flex items-center justify-center gap-2">
+                            <span>Enviar Petición</span>
+                            <span id="playgroundSpinner" class="hidden animate-spin">⟳</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Playground Output Box -->
+                <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4 font-mono text-xs overflow-hidden">
+                    <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-800/80 text-[11px]">
+                        <div class="flex items-center gap-2">
+                            <span class="text-slate-400">Respuesta HTTP:</span>
+                            <span id="playgroundStatus" class="font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-300">--</span>
+                            <span id="playgroundTime" class="text-slate-500">0 ms</span>
+                        </div>
+                        <button type="button" onclick="copyPlaygroundJson()" class="text-slate-400 hover:text-white transition flex items-center gap-1">
+                            <span>Copiar JSON</span>
+                        </button>
+                    </div>
+                    <pre id="playgroundOutput" class="text-slate-300 overflow-x-auto max-h-72 custom-scrollbar whitespace-pre leading-relaxed">{
+  "mensaje": "Selecciona un endpoint y presiona 'Enviar Petición' para ver el JSON en tiempo real."
+}</pre>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 3: Detailed Wiki & Endpoints Documentation -->
+        <section id="wiki" class="scroll-mt-24 space-y-10">
+            <div class="border-b border-slate-800 pb-4">
+                <h2 class="text-2xl font-black text-white tracking-tight">📖 Wiki de la API & Documentación</h2>
+                <p class="text-xs sm:text-sm text-slate-400 mt-1">Guía técnica completa para integrar los servicios en cualquier lenguaje de programación.</p>
+            </div>
+
+            <!-- 1. Authentication Concept -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                    <span class="text-blue-400">#</span> Autenticación & Cabeceras
+                </h3>
+                <p class="text-xs text-slate-300 leading-relaxed">
+                    Todas las solicitudes a las rutas de tasas (<code class="text-emerald-400">/api/v1/rates/*</code>) requieren una API Key activa. Puedes suministrarla mediante la cabecera HTTP estándar o a través de la URL:
+                </p>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono">
+                    <div class="bg-slate-950 border border-slate-800 rounded-xl p-3.5 space-y-1">
+                        <span class="text-[10px] text-slate-500 font-sans uppercase font-bold tracking-wider">Opción 1: Cabecera HTTP (Recomendada)</span>
+                        <div class="text-blue-300 font-semibold">X-API-Key: bolivia_live_TU_CLAVE</div>
+                    </div>
+                    <div class="bg-slate-950 border border-slate-800 rounded-xl p-3.5 space-y-1">
+                        <span class="text-[10px] text-slate-500 font-sans uppercase font-bold tracking-wider">Opción 2: Parámetro de Consulta (Query Param)</span>
+                        <div class="text-emerald-300 font-semibold">?apiKey=bolivia_live_TU_CLAVE</div>
+                    </div>
+                </div>
+
+                <div class="p-3 bg-slate-950/60 border border-slate-800 rounded-xl text-xs text-slate-400 flex items-start gap-2.5">
+                    <span class="text-amber-400 text-sm">ℹ️</span>
+                    <div>
+                        <strong>Rate Limiting (Control de Cuota):</strong>
+                        El nivel gratuito permite <strong>10 peticiones por minuto (RPM)</strong> por cada llave. Si se excede la cuota en una ventana de 60 segundos, la API responderá con el código <code class="text-rose-400 font-mono">429 Too Many Requests</code>.
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Endpoint: GET /api/v1/rates/latest -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-5">
+                <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
+                    <div class="flex items-center gap-2.5">
+                        <span class="px-2.5 py-1 rounded bg-blue-500/20 text-blue-400 font-mono text-xs font-bold">GET</span>
+                        <span class="font-mono text-sm sm:text-base font-bold text-white">/api/v1/rates/latest</span>
+                    </div>
+                    <span class="text-xs text-slate-400">Tasas consolidadas + desglose bancario</span>
+                </div>
+
+                <p class="text-xs text-slate-300">
+                    Retorna el snapshot de mercado más reciente con el promedio general ponderado, margen de spread y la cotización específica de cada entidad financiera boliviana (Banco Unión, BISA, Banco Mercantil Santa Cruz, BNB, Banco Sol, etc.).
+                </p>
+
+                <!-- Code Samples Tabbed or Stacked -->
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between text-xs text-slate-400">
+                        <span class="font-semibold text-slate-300">Ejemplos de Consumo:</span>
+                    </div>
+
+                    <!-- cURL -->
+                    <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 font-mono text-xs text-slate-300 overflow-x-auto">
+                        <span class="text-slate-500 block mb-1"># cURL (Terminal / Bash)</span>
+                        <code>curl -H "X-API-Key: bolivia_live_..." <span class="base-url-text" th:text="${baseUrl}">http://155.181.158.36:8080</span>/api/v1/rates/latest</code>
+                    </div>
+
+                    <!-- JavaScript -->
+                    <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 font-mono text-xs text-slate-300 overflow-x-auto">
+                        <span class="text-slate-500 block mb-1">// JavaScript (Node.js / Navegador)</span>
+                        <code>const res = await fetch('<span class="base-url-text" th:text="${baseUrl}">http://155.181.158.36:8080</span>/api/v1/rates/latest', {
+  headers: { 'X-API-Key': 'bolivia_live_...' }
+});
+const data = await res.json();
+console.log('Compra USDT:', data.buyMarket.referencePrice, 'Venta USDT:', data.sellMarket.referencePrice);</code>
+                    </div>
+
+                    <!-- Python -->
+                    <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 font-mono text-xs text-slate-300 overflow-x-auto">
+                        <span class="text-slate-500 block mb-1"># Python (requests)</span>
+                        <code>import requests
+res = requests.get('<span class="base-url-text" th:text="${baseUrl}">http://155.181.158.36:8080</span>/api/v1/rates/latest', headers={'X-API-Key': 'bolivia_live_...'})
+print(res.json()['buyMarket']['referencePrice'])</code>
+                    </div>
+                </div>
+
+                <!-- Example Response -->
+                <div class="space-y-1.5">
+                    <span class="text-xs font-semibold text-slate-400">Ejemplo de Respuesta JSON (200 OK):</span>
+                    <pre class="bg-slate-950 border border-slate-800 rounded-xl p-4 font-mono text-xs text-emerald-400/90 overflow-x-auto leading-relaxed">{
+  "globalBuyRate": 14.85,
+  "globalSellRate": 14.92,
+  "spread": 0.07,
+  "spreadPercentage": 0.47,
+  "polledAt": "2026-11-03T17:40:00Z",
+  "bankSummaries": [
+    {
+      "bankName": "BANCO_UNION",
+      "buyRate": 14.84,
+      "sellRate": 14.90,
+      "offerCount": 18
+    },
+    {
+      "bankName": "BANCO_BISA",
+      "buyRate": 14.85,
+      "sellRate": 14.93,
+      "offerCount": 12
+    }
+  ]
+}</pre>
+                </div>
+            </div>
+
+            <!-- 3. Other Endpoints Summary Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <!-- Endpoint Buy -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3">
+                    <div class="flex items-center gap-2">
+                        <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-mono text-xs font-bold">GET</span>
+                        <span class="font-mono text-xs font-bold text-white">/api/v1/rates/buy</span>
+                    </div>
+                    <p class="text-xs text-slate-400">
+                        Lista detallada de las mejores ofertas activas de compra (usuarios que compran USDT pagando con BOB). Incluye límites y métodos de pago.
+                    </p>
+                    <div class="font-mono text-[11px] text-slate-400 bg-slate-950 p-2 rounded-lg truncate">
+                        <code>curl -H "X-API-Key: ..." <span class="base-url-text" th:text="${baseUrl}">http://155.181.158.36:8080</span>/api/v1/rates/buy</code>
+                    </div>
+                </div>
+
+                <!-- Endpoint Sell -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3">
+                    <div class="flex items-center gap-2">
+                        <span class="px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 font-mono text-xs font-bold">GET</span>
+                        <span class="font-mono text-xs font-bold text-white">/api/v1/rates/sell</span>
+                    </div>
+                    <p class="text-xs text-slate-400">
+                        Lista detallada de ofertas activas de venta (usuarios que venden USDT a cambio de BOB). Ideal para conocer el precio real de salida.
+                    </p>
+                    <div class="font-mono text-[11px] text-slate-400 bg-slate-950 p-2 rounded-lg truncate">
+                        <code>curl -H "X-API-Key: ..." <span class="base-url-text" th:text="${baseUrl}">http://155.181.158.36:8080</span>/api/v1/rates/sell</code>
+                    </div>
+                </div>
+
+                <!-- Endpoint History -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3">
+                    <div class="flex items-center gap-2">
+                        <span class="px-2 py-0.5 rounded bg-purple-500/20 text-purple-400 font-mono text-xs font-bold">GET</span>
+                        <span class="font-mono text-xs font-bold text-white">/api/v1/rates/history</span>
+                    </div>
+                    <p class="text-xs text-slate-400">
+                        Serie histórica de cotizaciones guardadas en SQLite para análisis de tendencias, gráficas financieras o backtesting de algoritmos.
+                    </p>
+                    <div class="font-mono text-[11px] text-slate-400 bg-slate-950 p-2 rounded-lg truncate">
+                        <code>curl -H "X-API-Key: ..." <span class="base-url-text" th:text="${baseUrl}">http://155.181.158.36:8080</span>/api/v1/rates/history</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. HTTP Codes Table -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+                <h3 class="text-sm font-bold text-white">Códigos de Estado HTTP</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead>
+                            <tr class="border-b border-slate-800 text-slate-400">
+                                <th class="pb-2 font-semibold">Código</th>
+                                <th class="pb-2 font-semibold">Significado</th>
+                                <th class="pb-2 font-semibold">Motivo Común</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-800/60 font-mono">
+                            <tr>
+                                <td class="py-2.5 text-emerald-400 font-bold">200 OK</td>
+                                <td class="py-2.5 text-slate-300 font-sans">Petición exitosa</td>
+                                <td class="py-2.5 text-slate-400 font-sans">Retorna el JSON solicitado.</td>
+                            </tr>
+                            <tr>
+                                <td class="py-2.5 text-amber-400 font-bold">401 Unauthorized</td>
+                                <td class="py-2.5 text-slate-300 font-sans">No autorizado</td>
+                                <td class="py-2.5 text-slate-400 font-sans">Falta la cabecera `X-API-Key` o la clave no existe o está desactivada.</td>
+                            </tr>
+                            <tr>
+                                <td class="py-2.5 text-rose-400 font-bold">429 Too Many Requests</td>
+                                <td class="py-2.5 text-slate-300 font-sans">Límite excedido</td>
+                                <td class="py-2.5 text-slate-400 font-sans">Se superaron las 10 peticiones en la ventana de 1 minuto.</td>
+                            </tr>
+                            <tr>
+                                <td class="py-2.5 text-slate-400 font-bold">500 Server Error</td>
+                                <td class="py-2.5 text-slate-300 font-sans">Error interno</td>
+                                <td class="py-2.5 text-slate-400 font-sans">Excepción no controlada en el servidor.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-900 bg-slate-950 py-8 text-center text-xs text-slate-500 space-y-2">
+        <p>Bolivia P2P Rates Monitor &bull; Desarrollado con Java 25 &bull; Javalin 7 &bull; SQLite WAL &bull; HTMX</p>
+        <p class="text-[11px] text-slate-600">Servido de forma eficiente y optimizada para arquitectura Oracle Always Free (1 OCPU / 1 GB RAM).</p>
+    </footer>
+
+    <!-- Interactive Playground Script -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const currentOrigin = window.location.origin;
+            if (currentOrigin && !currentOrigin.includes('null')) {
+                document.querySelectorAll('.base-url-text').forEach(el => {
+                    el.textContent = currentOrigin;
+                });
+            }
+        });
+
+        function loadKeyIntoPlayground(key) {
+            const input = document.getElementById('playgroundApiKey');
+            if (input) {
+                input.value = key;
+                document.getElementById('playground').scrollIntoView({ behavior: 'smooth' });
+                executePlaygroundRequest();
+            }
+        }
+
+        async function executePlaygroundRequest() {
+            const endpoint = document.getElementById('playgroundEndpoint').value;
+            const apiKey = document.getElementById('playgroundApiKey').value.trim();
+            const statusEl = document.getElementById('playgroundStatus');
+            const timeEl = document.getElementById('playgroundTime');
+            const outputEl = document.getElementById('playgroundOutput');
+            const spinner = document.getElementById('playgroundSpinner');
+
+            statusEl.textContent = 'Enviando...';
+            statusEl.className = 'font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-300';
+            spinner.classList.remove('hidden');
+
+            const startTime = performance.now();
+            try {
+                const headers = {};
+                if (apiKey) {
+                    headers['X-API-Key'] = apiKey;
+                }
+                const response = await fetch(endpoint, { headers });
+                const endTime = performance.now();
+                const duration = Math.round(endTime - startTime);
+
+                const data = await response.json();
+                statusEl.textContent = `${response.status} ${response.statusText || ''}`;
+                timeEl.textContent = `${duration} ms`;
+
+                if (response.ok) {
+                    statusEl.className = 'font-bold px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800';
+                } else if (response.status === 401 || response.status === 429) {
+                    statusEl.className = 'font-bold px-2 py-0.5 rounded bg-amber-950 text-amber-400 border border-amber-800';
+                } else {
+                    statusEl.className = 'font-bold px-2 py-0.5 rounded bg-rose-950 text-rose-400 border border-rose-800';
+                }
+
+                outputEl.textContent = JSON.stringify(data, null, 2);
+            } catch (err) {
+                const endTime = performance.now();
+                timeEl.textContent = `${Math.round(endTime - startTime)} ms`;
+                statusEl.textContent = 'ERROR DE RED';
+                statusEl.className = 'font-bold px-2 py-0.5 rounded bg-rose-950 text-rose-400 border border-rose-800';
+                outputEl.textContent = JSON.stringify({ error: err.message }, null, 2);
+            } finally {
+                spinner.classList.add('hidden');
+            }
+        }
+
+        function copyPlaygroundJson() {
+            const text = document.getElementById('playgroundOutput').textContent;
+            navigator.clipboard.writeText(text);
+            alert('¡JSON copiado al portapapeles!');
+        }
+    </script>
+</body>
+</html>

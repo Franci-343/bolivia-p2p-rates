@@ -2,6 +2,7 @@ package dev.joracle.rates;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.joracle.rates.api.AdminController;
+import dev.joracle.rates.api.PortalController;
 import dev.joracle.rates.api.RateController;
 import dev.joracle.rates.client.BinanceP2PClient;
 import dev.joracle.rates.config.AppConfig;
@@ -60,6 +61,7 @@ public class App {
 
         RateController rateController = new RateController(rateRepository, pollerService, apiKeyService);
         AdminController adminController = new AdminController(rateRepository, pollerService, apiKeyService, config);
+        PortalController portalController = new PortalController(rateRepository, apiKeyService, config);
 
         // 4. Web Framework (Javalin 7 with Virtual Threads & Thymeleaf)
         Javalin app = Javalin.create(javalinConfig -> {
@@ -67,6 +69,7 @@ public class App {
             javalinConfig.fileRenderer(new JavalinThymeleaf(ThymeleafConfig.createTemplateEngine()));
             javalinConfig.concurrency.useVirtualThreads = true;
             javalinConfig.startup.showJavalinBanner = false;
+            portalController.registerRoutes(javalinConfig.routes);
             rateController.registerRoutes(javalinConfig.routes);
             adminController.registerRoutes(javalinConfig.routes);
         });
@@ -74,6 +77,10 @@ public class App {
         app.start(config.serverPort());
 
         log.info("Server started on port http://localhost:{}", config.serverPort());
+        log.info("Public Developer Portal & Wiki (HTMX + Thymeleaf):");
+        log.info("  GET  http://localhost:{}/ (Portal de Desarrolladores & Wiki)", config.serverPort());
+        log.info("  GET  http://localhost:{}/docs (Documentación de Endpoints)", config.serverPort());
+        log.info("  POST http://localhost:{}/portal/keys (Generación de API Keys)", config.serverPort());
         log.info("Web Dashboard (HTMX + Thymeleaf):");
         log.info("  GET  http://localhost:{}/admin (Panel de Administrador)", config.serverPort());
         log.info("REST Endpoints (Protected by X-API-Key):");
