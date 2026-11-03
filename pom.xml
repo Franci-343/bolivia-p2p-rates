@@ -38,6 +38,13 @@
       <version>${javalin.version}</version>
     </dependency>
 
+    <!-- Javalin Thymeleaf Rendering Plugin -->
+    <dependency>
+      <groupId>io.javalin</groupId>
+      <artifactId>javalin-rendering-thymeleaf</artifactId>
+      <version>${javalin.version}</version>
+    </dependency>
+
     <!-- Jackson for JSON processing & Javalin integration -->
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>

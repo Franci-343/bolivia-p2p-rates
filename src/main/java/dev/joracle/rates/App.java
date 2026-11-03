@@ -1,18 +1,24 @@
 package dev.joracle.rates;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.joracle.rates.api.AdminController;
 import dev.joracle.rates.api.RateController;
 import dev.joracle.rates.client.BinanceP2PClient;
 import dev.joracle.rates.config.AppConfig;
 import dev.joracle.rates.config.JsonConfig;
+import dev.joracle.rates.config.ThymeleafConfig;
 import dev.joracle.rates.db.DatabaseManager;
 import dev.joracle.rates.db.DatabaseMigrator;
+import dev.joracle.rates.repository.ApiClientRepository;
 import dev.joracle.rates.repository.RateRepository;
+import dev.joracle.rates.repository.SqliteApiClientRepository;
 import dev.joracle.rates.repository.SqliteRateRepository;
+import dev.joracle.rates.service.ApiKeyService;
 import dev.joracle.rates.service.RateAnalysisService;
 import dev.joracle.rates.service.RatePollerService;
 import io.javalin.Javalin;
 import io.javalin.json.JavalinJackson;
+import io.javalin.rendering.template.JavalinThymeleaf;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,7 +33,7 @@ public class App {
     private static final Logger log = LoggerFactory.getLogger(App.class);
 
     public static void main(String[] args) {
-        log.info("Starting Bolivia P2P Rates Service (Java 25 + Javalin 7 + SQLite)...");
+        log.info("Starting Bolivia P2P Rates Service (Java 25 + Javalin 7 + SQLite + HTMX)...");
 
         // 1. Configuration & JSON
         AppConfig config = AppConfig.fromEnv();
@@ -42,6 +48,8 @@ public class App {
         BinanceP2PClient binanceClient = new BinanceP2PClient(objectMapper, config);
         RateAnalysisService analysisService = new RateAnalysisService();
         RateRepository rateRepository = new SqliteRateRepository(databaseManager, objectMapper);
+        ApiClientRepository clientRepository = new SqliteApiClientRepository(databaseManager);
+        ApiKeyService apiKeyService = new ApiKeyService(clientRepository);
 
         RatePollerService pollerService = new RatePollerService(
                 binanceClient,
@@ -50,27 +58,32 @@ public class App {
                 config
         );
 
-        RateController rateController = new RateController(rateRepository, pollerService);
+        RateController rateController = new RateController(rateRepository, pollerService, apiKeyService);
+        AdminController adminController = new AdminController(rateRepository, pollerService, apiKeyService, config);
 
-        // 4. Web Framework (Javalin 7 with Virtual Threads)
+        // 4. Web Framework (Javalin 7 with Virtual Threads & Thymeleaf)
         Javalin app = Javalin.create(javalinConfig -> {
             javalinConfig.jsonMapper(new JavalinJackson(objectMapper, false));
+            javalinConfig.fileRenderer(new JavalinThymeleaf(ThymeleafConfig.createTemplateEngine()));
             javalinConfig.concurrency.useVirtualThreads = true;
             javalinConfig.startup.showJavalinBanner = false;
             rateController.registerRoutes(javalinConfig.routes);
+            adminController.registerRoutes(javalinConfig.routes);
         });
 
         app.start(config.serverPort());
 
         log.info("Server started on port http://localhost:{}", config.serverPort());
-        log.info("Available endpoints (100% served from SQLite Database / Memory buffer):");
-        log.info("  GET  /health");
-        log.info("  GET  /api/v1/status");
+        log.info("Web Dashboard (HTMX + Thymeleaf):");
+        log.info("  GET  http://localhost:{}/admin (Panel de Administrador)", config.serverPort());
+        log.info("REST Endpoints (Protected by X-API-Key):");
+        log.info("  GET  /health (Public)");
+        log.info("  GET  /api/v1/status (Public)");
         log.info("  GET  /api/v1/rates/latest");
         log.info("  GET  /api/v1/rates/buy");
         log.info("  GET  /api/v1/rates/sell");
         log.info("  GET  /api/v1/rates/history");
-        log.info("  POST /api/v1/rates/refresh (protected with cooldown)");
+        log.info("  POST /api/v1/rates/refresh (ADMIN only)");
 
         // 5. Start Background Poller Worker
         pollerService.start();

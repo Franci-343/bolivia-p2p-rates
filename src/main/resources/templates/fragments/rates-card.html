@@ -1,0 +1,109 @@
+<div id="rates-card" class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl"
+     hx-get="/admin/partials/rates" hx-trigger="every 15s" hx-swap="outerHTML">
+
+    <!-- Header Rates Card -->
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 pb-4 border-b border-slate-800">
+        <div>
+            <div class="flex items-center gap-2">
+                <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <h2 class="text-xl font-bold text-white tracking-tight">Mercado P2P en Vivo (USDT / BOB)</h2>
+            </div>
+            <p class="text-xs text-slate-400 mt-1" th:if="${snapshot != null}">
+                Ciclo #<span th:text="${snapshot.cycleId()}">1</span> |
+                Capturado: <span th:text="${#temporals.format(snapshot.timestamp(), 'yyyy-MM-dd HH:mm:ss')}">2026-11-03 12:00</span> UTC |
+                Duración: <span th:text="${snapshot.durationMs()}">1200</span> ms |
+                Estado: <span th:text="${snapshot.status()}" class="font-semibold text-emerald-400">OK</span>
+            </p>
+            <p class="text-xs text-amber-400 mt-1" th:if="${snapshot == null}">
+                Aún no hay capturas de mercado. Esperando primer ciclo o presione refrescar.
+            </p>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <span th:if="${refreshMessage != null}" class="text-xs px-2.5 py-1 bg-blue-950 text-blue-300 border border-blue-800 rounded-lg animate-fade-in"
+                  th:text="${refreshMessage}">
+                Refrescado con éxito
+            </span>
+            <button hx-post="/admin/refresh" hx-target="#rates-card" hx-swap="outerHTML"
+                    class="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition shadow">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                Forzar Refresco
+            </button>
+        </div>
+    </div>
+
+    <!-- Buy and Sell Side-by-Side -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6" th:if="${snapshot != null}">
+        <!-- COMPRA CARD -->
+        <div class="bg-slate-950/70 border border-emerald-900/40 rounded-lg p-5">
+            <div class="flex justify-between items-center mb-3">
+                <span class="text-xs font-bold uppercase tracking-wider text-emerald-400 bg-emerald-950/80 px-2.5 py-1 rounded-md border border-emerald-800/50">
+                    🟢 COMPRA (Usuario compra USDT con BOB)
+                </span>
+                <span class="text-xs text-slate-400" th:text="${snapshot.buyMarket().validCount() + ' anuncios válidos'}">10 anuncios</span>
+            </div>
+
+            <div class="my-4">
+                <div class="text-xs text-slate-400">Referencia de Mercado (Mediana):</div>
+                <div class="text-3xl font-extrabold text-white mt-1">
+                    <span th:text="${snapshot.buyMarket().referencePrice()}">12.02</span>
+                    <span class="text-sm font-semibold text-slate-400">BOB</span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 text-xs text-slate-300 py-2 border-t border-slate-800/60">
+                <div>Promedio: <span class="font-semibold text-white" th:text="${snapshot.buyMarket().averagePrice() + ' BOB'}">12.02 BOB</span></div>
+                <div>Rango: <span class="font-semibold text-white" th:text="${'[' + snapshot.buyMarket().minPrice() + ' - ' + snapshot.buyMarket().maxPrice() + ']'}">[12.00 - 12.03]</span></div>
+            </div>
+
+            <!-- Bancos Compra -->
+            <div class="mt-3 pt-3 border-t border-slate-800/60">
+                <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Bancos observados:</div>
+                <div class="flex flex-wrap gap-1.5">
+                    <span th:each="b : ${snapshot.buyMarket().bankSummaries()}"
+                          class="text-[11px] bg-slate-900 border border-slate-700/60 text-slate-200 px-2 py-0.5 rounded">
+                        <span th:text="${b.bankName()}">Banco Unión</span>
+                        <span class="text-emerald-400 font-medium" th:text="${'~' + b.averagePrice()}">~12.02</span>
+                    </span>
+                    <span th:if="${#lists.isEmpty(snapshot.buyMarket().bankSummaries())}" class="text-xs text-slate-500">Ninguno</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- VENTA CARD -->
+        <div class="bg-slate-950/70 border border-rose-900/40 rounded-lg p-5">
+            <div class="flex justify-between items-center mb-3">
+                <span class="text-xs font-bold uppercase tracking-wider text-rose-400 bg-rose-950/80 px-2.5 py-1 rounded-md border border-rose-800/50">
+                    🔴 VENTA (Usuario vende USDT por BOB)
+                </span>
+                <span class="text-xs text-slate-400" th:text="${snapshot.sellMarket().validCount() + ' anuncios válidos'}">10 anuncios</span>
+            </div>
+
+            <div class="my-4">
+                <div class="text-xs text-slate-400">Referencia de Mercado (Mediana):</div>
+                <div class="text-3xl font-extrabold text-white mt-1">
+                    <span th:text="${snapshot.sellMarket().referencePrice()}">11.98</span>
+                    <span class="text-sm font-semibold text-slate-400">BOB</span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 text-xs text-slate-300 py-2 border-t border-slate-800/60">
+                <div>Promedio: <span class="font-semibold text-white" th:text="${snapshot.sellMarket().averagePrice() + ' BOB'}">11.98 BOB</span></div>
+                <div>Rango: <span class="font-semibold text-white" th:text="${'[' + snapshot.sellMarket().minPrice() + ' - ' + snapshot.sellMarket().maxPrice() + ']'}">[11.96 - 12.00]</span></div>
+            </div>
+
+            <!-- Bancos Venta -->
+            <div class="mt-3 pt-3 border-t border-slate-800/60">
+                <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Bancos observados:</div>
+                <div class="flex flex-wrap gap-1.5">
+                    <span th:each="b : ${snapshot.sellMarket().bankSummaries()}"
+                          class="text-[11px] bg-slate-900 border border-slate-700/60 text-slate-200 px-2 py-0.5 rounded">
+                        <span th:text="${b.bankName()}">Banco Ganadero</span>
+                        <span class="text-rose-400 font-medium" th:text="${'~' + b.averagePrice()}">~11.98</span>
+                    </span>
+                    <span th:if="${#lists.isEmpty(snapshot.sellMarket().bankSummaries())}" class="text-xs text-slate-500">Ninguno</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,134 @@
+<div id="clients-section" class="space-y-6">
+
+    <!-- Alert Clave Generada (se muestra solo cuando se crea un cliente) -->
+    <div th:if="${newClientResult != null}" class="bg-emerald-950/80 border-2 border-emerald-500 rounded-xl p-5 shadow-2xl animate-fade-in">
+        <div class="flex items-start justify-between">
+            <div>
+                <span class="text-xs uppercase font-extrabold tracking-wider bg-emerald-500 text-slate-950 px-2.5 py-0.5 rounded">
+                    ¡API Key Generada con Éxito!
+                </span>
+                <p class="text-sm text-slate-200 mt-2 font-medium">
+                    Cliente: <strong class="text-white" th:text="${newClientResult.client().clientName()}">Carlos</strong>
+                    (<span th:text="${newClientResult.client().role()}">CONSUMER</span> - <span th:text="${newClientResult.client().rateLimitRpm()}">60</span> RPM)
+                </p>
+                <p class="text-xs text-amber-300 mt-1">
+                    Copia esta clave ahora. Por seguridad, no se volverá a mostrar en texto claro:
+                </p>
+            </div>
+            <button onclick="navigator.clipboard.writeText(document.getElementById('generated-key-input').value); alert('¡API Key copiada al portapapeles!');"
+                    class="px-3.5 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-lg text-xs transition shadow flex items-center gap-1.5">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                Copiar Clave
+            </button>
+        </div>
+        <div class="mt-3">
+            <input id="generated-key-input" type="text" readonly th:value="${newClientResult.plainApiKey()}"
+                   class="w-full bg-slate-900 border border-emerald-600/70 text-emerald-400 font-mono text-sm px-3.5 py-2.5 rounded-lg select-all focus:outline-none">
+        </div>
+    </div>
+
+    <!-- Formulario Crear Nueva Clave -->
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl">
+        <h3 class="text-lg font-bold text-white mb-2 flex items-center gap-2">
+            <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            Crear Nueva API Key para un Amigo / Aplicación
+        </h3>
+        <p class="text-xs text-slate-400 mb-5">
+            Genera una credencial única para que tus amigos o sistemas externos puedan consultar las cotizaciones de tu bot.
+        </p>
+
+        <form hx-post="/admin/clients" hx-target="#clients-section" hx-swap="outerHTML"
+              class="grid grid-cols-1 sm:grid-cols-12 gap-4 items-end">
+            <div class="sm:col-span-5">
+                <label class="block text-xs font-semibold text-slate-300 mb-1.5">Nombre del Cliente / Amigo</label>
+                <input type="text" name="clientName" required placeholder="Ej. App de Carlos o Bot Telegram"
+                       class="w-full bg-slate-950 border border-slate-700 rounded-lg text-sm text-white px-3.5 py-2.5 focus:border-blue-500 focus:outline-none">
+            </div>
+
+            <div class="sm:col-span-3">
+                <label class="block text-xs font-semibold text-slate-300 mb-1.5">Límite de Peticiones</label>
+                <select name="rateLimitRpm" class="w-full bg-slate-950 border border-slate-700 rounded-lg text-sm text-white px-3.5 py-2.5 focus:border-blue-500 focus:outline-none">
+                    <option value="30">30 req / minuto</option>
+                    <option value="60" selected>60 req / minuto (Estándar)</option>
+                    <option value="120">120 req / minuto</option>
+                    <option value="600">600 req / minuto (Intensivo)</option>
+                </select>
+            </div>
+
+            <div class="sm:col-span-2">
+                <label class="block text-xs font-semibold text-slate-300 mb-1.5">Rol de Acceso</label>
+                <select name="role" class="w-full bg-slate-950 border border-slate-700 rounded-lg text-sm text-white px-3.5 py-2.5 focus:border-blue-500 focus:outline-none">
+                    <option value="CONSUMER" selected>CONSUMER</option>
+                    <option value="ADMIN">ADMIN</option>
+                </select>
+            </div>
+
+            <div class="sm:col-span-2">
+                <button type="submit" class="w-full px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-sm transition shadow">
+                    Generar Clave
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Tabla Clientes Registrados -->
+    <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xl">
+        <div class="p-5 border-b border-slate-800 flex justify-between items-center">
+            <div>
+                <h3 class="text-base font-bold text-white">Clientes y API Keys Registradas</h3>
+                <p class="text-xs text-slate-400 mt-0.5">Control de acceso y cuotas en base de datos SQLite</p>
+            </div>
+            <span class="text-xs bg-slate-800 text-slate-300 px-3 py-1 rounded-full font-semibold"
+                  th:text="${#lists.size(clients) + ' registrados'}">3 registrados</span>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-300">
+                <thead class="bg-slate-950/80 text-slate-400 uppercase text-[11px] font-semibold border-b border-slate-800">
+                    <tr>
+                        <th class="px-5 py-3.5">Cliente</th>
+                        <th class="px-4 py-3.5">Identificador</th>
+                        <th class="px-3 py-3.5">Rol</th>
+                        <th class="px-3 py-3.5">Cuota (RPM)</th>
+                        <th class="px-4 py-3.5">Estado</th>
+                        <th class="px-4 py-3.5">Creado</th>
+                        <th class="px-5 py-3.5 text-right">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800/60">
+                    <tr th:each="c : ${clients}" class="hover:bg-slate-800/40 transition">
+                        <td class="px-5 py-3.5 font-bold text-white" th:text="${c.clientName()}">Carlos</td>
+                        <td class="px-4 py-3.5 font-mono text-[11px] text-slate-400" th:text="${c.clientId()}">client_carlos</td>
+                        <td class="px-3 py-3.5">
+                            <span th:class="${c.isAdmin() ? 'px-2 py-0.5 rounded text-[10px] font-bold bg-purple-950 text-purple-300 border border-purple-800' : 'px-2 py-0.5 rounded text-[10px] font-bold bg-blue-950 text-blue-300 border border-blue-800'}"
+                                  th:text="${c.role()}">CONSUMER</span>
+                        </td>
+                        <td class="px-3 py-3.5 font-semibold text-slate-200" th:text="${c.rateLimitRpm() + ' req/min'}">60 req/min</td>
+                        <td class="px-4 py-3.5">
+                            <span th:if="${c.active()}" class="px-2 py-0.5 bg-emerald-950 text-emerald-400 border border-emerald-800/60 rounded text-[11px] font-medium">Activo</span>
+                            <span th:unless="${c.active()}" class="px-2 py-0.5 bg-rose-950 text-rose-400 border border-rose-800/60 rounded text-[11px] font-medium">Pausado</span>
+                        </td>
+                        <td class="px-4 py-3.5 text-slate-400" th:text="${c.createdAt()}">2026-11-03</td>
+                        <td class="px-5 py-3.5 text-right space-x-2">
+                            <!-- Toggle Activo / Pausado -->
+                            <button th:attr="hx-post='/admin/clients/' + ${c.id()} + '/toggle'"
+                                    hx-target="#clients-section" hx-swap="outerHTML"
+                                    class="px-2.5 py-1 text-[11px] font-semibold rounded bg-slate-800 hover:bg-slate-700 text-slate-200 transition">
+                                <span th:text="${c.active() ? 'Pausar' : 'Activar'}">Pausar</span>
+                            </button>
+
+                            <!-- Eliminar (solo si no es admin_local_system) -->
+                            <button th:if="${c.clientId() != 'admin_local_system'}"
+                                    th:attr="hx-delete='/admin/clients/' + ${c.id()}"
+                                    hx-target="#clients-section" hx-swap="outerHTML"
+                                    hx-confirm="¿Seguro que deseas eliminar este cliente y revocar su clave?"
+                                    class="px-2.5 py-1 text-[11px] font-semibold rounded bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-800/50 transition">
+                                Eliminar
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

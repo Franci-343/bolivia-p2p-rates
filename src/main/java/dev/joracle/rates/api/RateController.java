@@ -1,8 +1,10 @@
 package dev.joracle.rates.api;
 
 import dev.joracle.rates.client.BinanceApiException;
+import dev.joracle.rates.model.ApiClient;
 import dev.joracle.rates.model.RateSnapshot;
 import dev.joracle.rates.repository.RateRepository;
+import dev.joracle.rates.service.ApiKeyService;
 import dev.joracle.rates.service.RatePollerService;
 import io.javalin.config.RoutesConfig;
 import io.javalin.http.Context;
@@ -18,26 +20,31 @@ import java.util.Objects;
  * REST controller exposing endpoints for consumers and developers.
  * <p>
  * Core Architecture Rule:
- * All consumer requests read strictly from {@link RateRepository} (In-Memory buffer / Oracle DB).
+ * All consumer requests read strictly from {@link RateRepository} (In-Memory buffer / SQLite DB).
  * Zero requests are forwarded to Binance when clients query this API.
  */
 public class RateController {
 
     private final RateRepository rateRepository;
     private final RatePollerService pollerService;
+    private final ApiKeyService apiKeyService;
 
-    public RateController(RateRepository rateRepository, RatePollerService pollerService) {
+    public RateController(RateRepository rateRepository, RatePollerService pollerService, ApiKeyService apiKeyService) {
         this.rateRepository = Objects.requireNonNull(rateRepository, "rateRepository cannot be null");
         this.pollerService = Objects.requireNonNull(pollerService, "pollerService cannot be null");
+        this.apiKeyService = Objects.requireNonNull(apiKeyService, "apiKeyService cannot be null");
     }
 
     /**
      * Registers all routes and global exception handlers on Javalin 7's RoutesConfig.
      */
     public void registerRoutes(RoutesConfig routes) {
-        // Health & Status endpoints
+        // Public Health & Status endpoints (open for infrastructure monitors)
         routes.get("/health", this::healthCheck);
         routes.get("/api/v1/status", this::getStatus);
+
+        // Security filter for rate endpoints (requires valid active API Key)
+        routes.before("/api/v1/rates/*", this::authenticateRateRequest);
 
         // Core rate endpoints (all served strictly from repository)
         routes.get("/api/v1/rates/latest", this::getLatestRates);
@@ -45,7 +52,7 @@ public class RateController {
         routes.get("/api/v1/rates/sell", this::getSellRates);
         routes.get("/api/v1/rates/history", this::getRecentHistory);
 
-        // Protected refresh with strict cooldown
+        // Protected refresh with strict cooldown (requires ADMIN role)
         routes.post("/api/v1/rates/refresh", this::refreshRates);
 
         // Global Exception Handlers
@@ -64,6 +71,34 @@ public class RateController {
                     "timestamp", Instant.now().toString()
             ));
         });
+    }
+
+    private void authenticateRateRequest(Context ctx) {
+        String apiKey = ctx.header("X-API-Key");
+        if (apiKey == null || apiKey.isBlank()) {
+            apiKey = ctx.queryParam("apiKey"); // Fallback for easy testing in browser
+        }
+
+        ApiKeyService.AuthResult auth = apiKeyService.authenticate(apiKey);
+        if (!auth.authorized()) {
+            if (auth.rateLimited()) {
+                ctx.status(HttpStatus.TOO_MANY_REQUESTS).json(Map.of(
+                        "error", "Too Many Requests",
+                        "message", auth.errorMessage(),
+                        "timestamp", Instant.now().toString()
+                ));
+            } else {
+                ctx.status(HttpStatus.UNAUTHORIZED).json(Map.of(
+                        "error", "Unauthorized",
+                        "message", auth.errorMessage(),
+                        "timestamp", Instant.now().toString()
+                ));
+            }
+            ctx.skipRemainingHandlers();
+            return;
+        }
+
+        ctx.attribute("apiClient", auth.client());
     }
 
     private void healthCheck(Context ctx) {
@@ -133,6 +168,16 @@ public class RateController {
     }
 
     private void refreshRates(Context ctx) {
+        ApiClient client = ctx.attribute("apiClient");
+        if (client == null || !client.isAdmin()) {
+            ctx.status(HttpStatus.FORBIDDEN).json(Map.of(
+                    "error", "Forbidden",
+                    "message", "Se requieren privilegios de ADMIN para forzar refresco manual.",
+                    "timestamp", Instant.now().toString()
+            ));
+            return;
+        }
+
         RatePollerService.RefreshResult result = pollerService.refreshWithCooldown();
         if (!result.executed()) {
             ctx.header("X-Cache", "HIT-COOLDOWN");
