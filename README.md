@@ -105,4 +105,3 @@ Los cambios en la base de datos se versionan mediante scripts SQL en la carpeta 
 * `001_create_rate_snapshots.sql`: Crea la tabla `rate_snapshots` e índices para histórico y consultas rápidas.
 * `002_create_api_clients.sql`: Crea la tabla `api_clients` para control de API Keys y semillas iniciales.
 
-El ejecutor interno `DatabaseMigrator` detecta y aplica automáticamente cualquier nueva migración al arrancar el servicio.
