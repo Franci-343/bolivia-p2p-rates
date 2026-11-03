@@ -34,7 +34,12 @@ echo "ubuntu ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart bolivia-rates, /usr/
 sudo chmod 440 /etc/sudoers.d/bolivia-rates
 
 echo "=== 4. Configurando Servicio systemd ==="
-sudo cp -f /home/ubuntu/bolivia-p2p-rates/deploy/bolivia-rates.service /etc/systemd/system/bolivia-rates.service 2>/dev/null || cat << 'EOF' | sudo tee /etc/systemd/system/bolivia-rates.service
+JAVA_EXEC="/usr/bin/java"
+if [ -f "/home/ubuntu/.sdkman/candidates/java/current/bin/java" ]; then
+    JAVA_EXEC="/home/ubuntu/.sdkman/candidates/java/current/bin/java"
+fi
+
+cat << EOF | sudo tee /etc/systemd/system/bolivia-rates.service
 [Unit]
 Description=Bolivia P2P Rates Monitor Service
 After=network.target
@@ -43,7 +48,7 @@ After=network.target
 Type=simple
 User=ubuntu
 WorkingDirectory=/home/ubuntu/bolivia-p2p-rates
-ExecStart=/usr/bin/java -Xms96m -Xmx256m -XX:MaxMetaspaceSize=96m -XX:+UseSerialGC -jar /home/ubuntu/bolivia-p2p-rates/bolivia-p2p-rates.jar
+ExecStart=$JAVA_EXEC -Xms96m -Xmx256m -XX:MaxMetaspaceSize=96m -XX:+UseSerialGC -jar /home/ubuntu/bolivia-p2p-rates/bolivia-p2p-rates.jar
 Restart=always
 RestartSec=5
 Environment=PORT=8080
