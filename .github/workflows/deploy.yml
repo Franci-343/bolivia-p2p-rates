@@ -55,14 +55,14 @@ jobs:
           target: "/home/ubuntu/bolivia-p2p-rates/database/"
           strip_components: 1
 
-      - name: Copy Service File to Server
+      - name: Copy Service File and JRE Builder to Server
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.SERVER_PORT || 22 }}
-          source: "deploy/bolivia-rates.service"
+          source: "deploy/bolivia-rates.service,deploy/build-custom-jre.sh"
           target: "/home/ubuntu/bolivia-p2p-rates/"
           strip_components: 1
 
@@ -76,6 +76,8 @@ jobs:
           script: |
             cd /home/ubuntu/bolivia-p2p-rates
             mv -f bolivia-p2p-rates-0.1.0-SNAPSHOT.jar bolivia-p2p-rates.jar 2>/dev/null || true
+            chmod +x build-custom-jre.sh
+            ./build-custom-jre.sh
             sudo cp -f /home/ubuntu/bolivia-p2p-rates/bolivia-rates.service /etc/systemd/system/bolivia-rates.service
             sudo systemctl daemon-reload
             sudo systemctl enable bolivia-rates

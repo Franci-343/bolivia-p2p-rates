@@ -30,15 +30,16 @@ mkdir -p /home/ubuntu/bolivia-p2p-rates/database
 chmod 755 /home/ubuntu/bolivia-p2p-rates
 
 echo "=== 3. Permisos sudoers para reinicio sin contraseña en CI/CD ==="
-echo "ubuntu ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart bolivia-rates, /usr/bin/systemctl status bolivia-rates" | sudo tee /etc/sudoers.d/bolivia-rates
+echo "ubuntu ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart bolivia-rates, /usr/bin/systemctl status bolivia-rates, /usr/bin/systemctl daemon-reload, /usr/bin/systemctl enable bolivia-rates, /usr/bin/cp -f /home/ubuntu/bolivia-p2p-rates/bolivia-rates.service /etc/systemd/system/bolivia-rates.service" | sudo tee /etc/sudoers.d/bolivia-rates
 sudo chmod 440 /etc/sudoers.d/bolivia-rates
 
-echo "=== 4. Configurando Servicio systemd ==="
-JAVA_EXEC="/usr/bin/java"
-if [ -f "/home/ubuntu/.sdkman/candidates/java/current/bin/java" ]; then
-    JAVA_EXEC="/home/ubuntu/.sdkman/candidates/java/current/bin/java"
+echo "=== 4. Construyendo Custom Minimal JRE con jlink ==="
+if [ -f "/home/ubuntu/bolivia-p2p-rates/build-custom-jre.sh" ]; then
+    chmod +x /home/ubuntu/bolivia-p2p-rates/build-custom-jre.sh
+    /home/ubuntu/bolivia-p2p-rates/build-custom-jre.sh
 fi
 
+echo "=== 5. Configurando Servicio systemd con Custom JRE ==="
 cat << EOF | sudo tee /etc/systemd/system/bolivia-rates.service
 [Unit]
 Description=Bolivia P2P Rates Monitor Service
@@ -48,12 +49,14 @@ After=network.target
 Type=simple
 User=ubuntu
 WorkingDirectory=/home/ubuntu/bolivia-p2p-rates
-ExecStart=$JAVA_EXEC -Xms96m -Xmx256m -XX:MaxMetaspaceSize=96m -XX:+UseSerialGC -jar /home/ubuntu/bolivia-p2p-rates/bolivia-p2p-rates.jar
+ExecStart=/home/ubuntu/bolivia-p2p-rates/jre/bin/java -Xms64m -Xmx256m -XX:MaxMetaspaceSize=80m -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -jar /home/ubuntu/bolivia-p2p-rates/bolivia-p2p-rates.jar
 Restart=always
 RestartSec=5
 Environment=PORT=8080
 Environment=POLL_INTERVAL_SECONDS=600
 Environment=SQLITE_DB_PATH=database/rates.db
+Environment=FIAT_CURRENCY=BOB
+Environment=ASSET_CURRENCY=USDT
 MemoryMax=450M
 
 [Install]
@@ -63,7 +66,7 @@ EOF
 sudo systemctl daemon-reload
 sudo systemctl enable bolivia-rates
 
-echo "=== 5. Abriendo Puerto 8080 en el Firewall iptables de Ubuntu ==="
+echo "=== 6. Abriendo Puerto 8080 en el Firewall iptables de Ubuntu ==="
 # Las imágenes Ubuntu de Oracle Cloud tienen reglas iptables que bloquean puertos no estándar
 sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 8080 -j ACCEPT 2>/dev/null || true
 if which netfilter-persistent >/dev/null 2>&1; then
