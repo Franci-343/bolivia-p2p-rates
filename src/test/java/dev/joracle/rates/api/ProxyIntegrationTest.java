@@ -171,6 +171,33 @@ class ProxyIntegrationTest {
         assertTrue(html.contains("hx-post=\"/bolivia-p2p-rates/portal/keys\""));
         assertTrue(html.contains("publicBasePath = \"\\/bolivia-p2p-rates\";"));
         assertTrue(html.contains("<span class=\"base-url-text\">https://155.181.158.36/bolivia-p2p-rates</span>/api/v1/rates/latest"));
+        assertTrue(html.contains("PRECIO DE COMPRA"));
+        assertTrue(html.contains("PRECIO DE VENTA"));
+        assertTrue(html.contains("14.85"));
+        assertTrue(html.contains("14.92"));
+    }
+
+    @Test
+    void testPublicRatesCardHeroFragment() {
+        MockContext mock = new MockContext();
+        mock.headers.put("Host", "155.181.158.36");
+        invokeMethod(portalController, "renderPublicRatesCard", mock.createContextProxy());
+
+        assertEquals("fragments/public-rates-hero.html", mock.renderedTemplate);
+        assertEquals("/bolivia-p2p-rates", mock.renderedModel.get("publicBasePath"));
+        assertEquals("14.85", mock.renderedModel.get("buyPrice"));
+        assertEquals("14.92", mock.renderedModel.get("sellPrice"));
+
+        TemplateEngine engine = ThymeleafConfig.createTemplateEngine();
+        org.thymeleaf.context.Context thymeleafCtx = new org.thymeleaf.context.Context();
+        thymeleafCtx.setVariables(mock.renderedModel);
+        String html = engine.process(mock.renderedTemplate, thymeleafCtx);
+
+        assertTrue(html.contains("PRECIO DE COMPRA"));
+        assertTrue(html.contains("PRECIO DE VENTA"));
+        assertTrue(html.contains("14.85"));
+        assertTrue(html.contains("14.92"));
+        assertTrue(html.contains("hx-get=\"/bolivia-p2p-rates/portal/rates-card\""));
     }
 
     @Test

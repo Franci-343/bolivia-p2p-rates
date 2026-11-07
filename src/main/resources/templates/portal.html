@@ -107,7 +107,7 @@
             </div>
 
             <!-- Ticker preview in navbar (when snapshot available) -->
-            <div th:if="${snapshot != null and snapshot.buyMarket() != null and snapshot.sellMarket() != null}" 
+            <div th:if="${buyPrice != null and sellPrice != null}" 
                  class="hidden lg:flex items-center gap-3.5 text-xs bg-slate-900/90 border border-slate-800/90 px-3.5 py-1.5 rounded-full shadow-inner">
                 <div class="flex items-center gap-1.5">
                     <span class="relative flex h-2 w-2">
@@ -118,10 +118,10 @@
                 </div>
                 <div class="flex items-center gap-2 font-mono">
                     <span class="text-slate-400 text-[11px]">Compra</span>
-                    <span class="text-emerald-400 font-bold" th:text="${snapshot.buyMarket().referencePrice() + ' BOB'}">12.00 BOB</span>
+                    <span class="text-emerald-400 font-bold" th:text="${'Bs. ' + buyPrice}">Bs. 12.19</span>
                     <span class="text-slate-700">|</span>
                     <span class="text-slate-400 text-[11px]">Venta</span>
-                    <span class="text-sky-400 font-bold" th:text="${snapshot.sellMarket().referencePrice() + ' BOB'}">11.95 BOB</span>
+                    <span class="text-rose-400 font-bold" th:text="${'Bs. ' + sellPrice}">Bs. 11.81</span>
                 </div>
             </div>
 
@@ -180,27 +180,9 @@
                 </a>
             </div>
 
-            <!-- Quick Live Rates Snapshot Card (if available) -->
-            <div th:if="${snapshot != null and snapshot.buyMarket() != null and snapshot.sellMarket() != null}" 
-                 class="max-w-2xl mx-auto mt-6 p-4 rounded-2xl bg-slate-900/70 border border-slate-800/90 backdrop-blur-md shadow-glow-blue text-left">
-                <div class="flex items-center justify-between border-b border-slate-800/80 pb-2.5 mb-3 text-xs">
-                    <span class="text-slate-400 font-semibold uppercase tracking-wider text-[11px] flex items-center gap-1.5">
-                        <span class="w-2 h-2 rounded-full bg-emerald-400"></span> Cotización en Vivo (Binance P2P Bolivia)
-                    </span>
-                    <span class="text-slate-500 font-mono text-[11px]" th:text="${snapshot.timestamp()}">2026-11-07</span>
-                </div>
-                <div class="grid grid-cols-2 gap-3 text-center">
-                    <div class="bg-slate-950/70 rounded-xl p-3 border border-slate-800/60">
-                        <span class="text-[11px] text-slate-400 block mb-0.5 font-medium">Compra (Quiero BOB)</span>
-                        <span class="text-lg sm:text-xl font-bold font-mono text-emerald-400" th:text="${snapshot.buyMarket().referencePrice() + ' BOB'}">12.00 BOB</span>
-                        <span class="text-[10px] text-slate-500 block mt-0.5" th:text="${snapshot.buyMarket().validCount() + ' ofertas analizadas'}">10 ofertas</span>
-                    </div>
-                    <div class="bg-slate-950/70 rounded-xl p-3 border border-slate-800/60">
-                        <span class="text-[11px] text-slate-400 block mb-0.5 font-medium">Venta (Quiero USDT)</span>
-                        <span class="text-lg sm:text-xl font-bold font-mono text-sky-400" th:text="${snapshot.sellMarket().referencePrice() + ' BOB'}">11.95 BOB</span>
-                        <span class="text-[10px] text-slate-500 block mt-0.5" th:text="${snapshot.sellMarket().validCount() + ' ofertas analizadas'}">10 ofertas</span>
-                    </div>
-                </div>
+            <!-- Giant Live Rates Cards (Dólar Paralelo / P2P Bolivia) -->
+            <div class="pt-4">
+                <div th:replace="~{fragments/public-rates-hero}"></div>
             </div>
 
             <!-- Features Quick Badges -->

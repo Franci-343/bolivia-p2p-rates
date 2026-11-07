@@ -10,12 +10,17 @@ import io.javalin.http.Context;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
@@ -59,18 +64,53 @@ public class PortalController {
     public void registerRoutes(RoutesConfig routes) {
         routes.get("/", this::renderPortal);
         routes.get("/docs", this::renderPortal);
+        routes.get("/portal/rates-card", this::renderPublicRatesCard);
         routes.post("/portal/keys", this::handlePublicCreateKey);
     }
 
     private void renderPortal(Context ctx) {
         RateSnapshot snapshot = rateRepository.findLatest().orElse(null);
         Map<String, Object> model = new HashMap<>();
-        model.put("snapshot", snapshot);
+        populateRatesModel(model, snapshot);
         model.put("defaultDemoKey", "bolivia_live_demo12345");
         model.put("baseUrl", resolveBaseUrl(ctx));
         model.put("publicBasePath", config.publicBasePath());
         model.put("serverPort", config.serverPort());
         ctx.render("portal.html", model);
+    }
+
+    private void renderPublicRatesCard(Context ctx) {
+        RateSnapshot snapshot = rateRepository.findLatest().orElse(null);
+        Map<String, Object> model = new HashMap<>();
+        populateRatesModel(model, snapshot);
+        model.put("publicBasePath", config.publicBasePath());
+        ctx.render("fragments/public-rates-hero.html", model);
+    }
+
+    private void populateRatesModel(Map<String, Object> model, RateSnapshot snapshot) {
+        model.put("snapshot", snapshot);
+        if (snapshot != null && snapshot.buyMarket() != null && snapshot.sellMarket() != null) {
+            BigDecimal buyPrice = snapshot.buyMarket().referencePrice();
+            BigDecimal sellPrice = snapshot.sellMarket().referencePrice();
+            model.put("buyPrice", buyPrice != null ? buyPrice.toPlainString() : null);
+            model.put("sellPrice", sellPrice != null ? sellPrice.toPlainString() : null);
+            model.put("buyCount", snapshot.buyMarket().validCount());
+            model.put("sellCount", snapshot.sellMarket().validCount());
+
+            if (buyPrice != null && sellPrice != null && sellPrice.compareTo(BigDecimal.ZERO) > 0) {
+                BigDecimal spread = buyPrice.subtract(sellPrice).abs();
+                BigDecimal spreadPct = spread.divide(sellPrice, 4, RoundingMode.HALF_UP)
+                        .multiply(BigDecimal.valueOf(100)).setScale(2, RoundingMode.HALF_UP);
+                model.put("spread", spread.toPlainString());
+                model.put("spreadPercentage", spreadPct.toPlainString());
+            }
+
+            if (snapshot.timestamp() != null) {
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("d MMM yyyy, HH:mm", Locale.forLanguageTag("es-BO"))
+                        .withZone(ZoneId.of("America/La_Paz"));
+                model.put("formattedTime", formatter.format(snapshot.timestamp()) + " (Hora Bolivia)");
+            }
+        }
     }
 
     private void handlePublicCreateKey(Context ctx) {
