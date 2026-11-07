@@ -19,11 +19,14 @@ import dev.joracle.rates.service.RateAnalysisService;
 import dev.joracle.rates.service.RatePollerService;
 import io.javalin.Javalin;
 import io.javalin.json.JavalinJackson;
+import io.javalin.rendering.FileRenderer;
 import io.javalin.rendering.template.JavalinThymeleaf;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Main application bootstrap for Bolivia P2P Rates Monitor.
@@ -64,9 +67,14 @@ public class App {
         PortalController portalController = new PortalController(rateRepository, apiKeyService, config);
 
         // 4. Web Framework (Javalin 7 with Virtual Threads & Thymeleaf)
+        FileRenderer thymeleafRenderer = new JavalinThymeleaf(ThymeleafConfig.createTemplateEngine());
         Javalin app = Javalin.create(javalinConfig -> {
             javalinConfig.jsonMapper(new JavalinJackson(objectMapper, false));
-            javalinConfig.fileRenderer(new JavalinThymeleaf(ThymeleafConfig.createTemplateEngine()));
+            javalinConfig.fileRenderer((filePath, model, context) -> {
+                Map<String, Object> enrichedModel = new HashMap<>(model);
+                enrichedModel.putIfAbsent("publicBasePath", config.publicBasePath());
+                return thymeleafRenderer.render(filePath, enrichedModel, context);
+            });
             javalinConfig.concurrency.useVirtualThreads = true;
             javalinConfig.startup.showJavalinBanner = false;
             portalController.registerRoutes(javalinConfig.routes);
@@ -77,6 +85,9 @@ public class App {
         app.start(config.serverPort());
 
         log.info("Server started on port http://localhost:{}", config.serverPort());
+        if (!config.publicBasePath().isEmpty()) {
+            log.info("Configured Public Base Path: {}", config.publicBasePath());
+        }
         log.info("Public Developer Portal & Wiki (HTMX + Thymeleaf):");
         log.info("  GET  http://localhost:{}/ (Portal de Desarrolladores & Wiki)", config.serverPort());
         log.info("  GET  http://localhost:{}/docs (Documentación de Endpoints)", config.serverPort());

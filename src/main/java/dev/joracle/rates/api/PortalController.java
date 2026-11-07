@@ -54,6 +54,7 @@ public class PortalController {
         model.put("snapshot", snapshot);
         model.put("defaultDemoKey", "bolivia_live_demo12345");
         model.put("baseUrl", resolveBaseUrl(ctx));
+        model.put("publicBasePath", config.publicBasePath());
         model.put("serverPort", config.serverPort());
         ctx.render("portal.html", model);
     }
@@ -68,6 +69,7 @@ public class PortalController {
             model.put("errorMessage", "Has alcanzado el límite de 5 API Keys por hora desde tu dirección IP. Intenta más tarde o contáctanos si requieres cuota adicional.");
             model.put("creationResult", null);
             model.put("baseUrl", baseUrl);
+            model.put("publicBasePath", config.publicBasePath());
             ctx.render("fragments/public-key-result.html", model);
             return;
         }
@@ -79,6 +81,7 @@ public class PortalController {
             model.put("errorMessage", "Por favor ingresa un nombre o identificador válido para tu aplicación (mínimo 2 caracteres).");
             model.put("creationResult", null);
             model.put("baseUrl", baseUrl);
+            model.put("publicBasePath", config.publicBasePath());
             ctx.render("fragments/public-key-result.html", model);
             return;
         }
@@ -97,6 +100,7 @@ public class PortalController {
         model.put("errorMessage", null);
         model.put("creationResult", creationResult);
         model.put("baseUrl", baseUrl);
+        model.put("publicBasePath", config.publicBasePath());
         model.put("serverPort", config.serverPort());
         ctx.render("fragments/public-key-result.html", model);
     }
@@ -140,14 +144,20 @@ public class PortalController {
     }
 
     private String resolveBaseUrl(Context ctx) {
-        String host = ctx.header("Host");
+        String host = ctx.header("X-Forwarded-Host");
+        if (host == null || host.isBlank()) {
+            host = ctx.header("Host");
+        }
         if (host == null || host.isBlank()) {
             host = "155.181.158.36:" + config.serverPort();
         }
-        String scheme = ctx.scheme();
+        String scheme = ctx.header("X-Forwarded-Proto");
+        if (scheme == null || scheme.isBlank()) {
+            scheme = ctx.scheme();
+        }
         if (scheme == null || scheme.isBlank()) {
             scheme = "http";
         }
-        return scheme + "://" + host;
+        return scheme + "://" + host + config.publicBasePath();
     }
 }

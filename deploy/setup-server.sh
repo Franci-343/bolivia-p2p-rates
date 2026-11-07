@@ -58,6 +58,7 @@ Environment=POLL_INTERVAL_SECONDS=600
 Environment=SQLITE_DB_PATH=database/rates.db
 Environment=FIAT_CURRENCY=BOB
 Environment=ASSET_CURRENCY=USDT
+Environment=PUBLIC_BASE_PATH=/bolivia-p2p-rates
 MemoryMax=450M
 
 [Install]

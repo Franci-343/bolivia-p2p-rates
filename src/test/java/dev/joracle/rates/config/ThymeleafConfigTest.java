@@ -170,4 +170,47 @@ public class ThymeleafConfigTest {
             assertTrue(rendered.contains("Límite de peticiones por IP excedido."));
         });
     }
+
+    @Test
+    void testRenderTemplatesWithPublicBasePath() {
+        TemplateEngine engine = ThymeleafConfig.createTemplateEngine();
+
+        // 1. Portal with /bolivia-p2p-rates
+        Context portalContext = new Context();
+        portalContext.setVariables(Map.of(
+                "publicBasePath", "/bolivia-p2p-rates",
+                "baseUrl", "https://155.181.158.36/bolivia-p2p-rates",
+                "defaultDemoKey", "bolivia_demo"
+        ));
+        String portalHtml = engine.process("portal.html", portalContext);
+        assertTrue(portalHtml.contains("href=\"/bolivia-p2p-rates/\""));
+        assertTrue(portalHtml.contains("href=\"/bolivia-p2p-rates/admin\""));
+        assertTrue(portalHtml.contains("hx-post=\"/bolivia-p2p-rates/portal/keys\""));
+        assertTrue(portalHtml.contains("publicBasePath = \"\\/bolivia-p2p-rates\";"));
+
+        // 2. Admin Login with /bolivia-p2p-rates
+        Context adminContext = new Context();
+        adminContext.setVariables(Map.of(
+                "publicBasePath", "/bolivia-p2p-rates",
+                "isAdminLoggedIn", false
+        ));
+        String adminHtml = engine.process("admin.html", adminContext);
+        assertTrue(adminHtml.contains("action=\"/bolivia-p2p-rates/admin/login\""));
+
+        // 3. Admin Dashboard with /bolivia-p2p-rates
+        Context adminLoggedInContext = new Context();
+        adminLoggedInContext.setVariables(Map.of(
+                "publicBasePath", "/bolivia-p2p-rates",
+                "isAdminLoggedIn", true,
+                "clients", List.of(new ApiClient(1L, "client_carlos", "Carlos", "hash", "CONSUMER", 60, true, "2026-11-03 14:00:00"))
+        ));
+        String adminLoggedInHtml = engine.process("admin.html", adminLoggedInContext);
+        assertTrue(adminLoggedInHtml.contains("action=\"/bolivia-p2p-rates/admin/logout\""));
+        assertTrue(adminLoggedInHtml.contains("href=\"/bolivia-p2p-rates/api/v1/rates/latest\""));
+        assertTrue(adminLoggedInHtml.contains("hx-get=\"/bolivia-p2p-rates/admin/partials/rates\""));
+        assertTrue(adminLoggedInHtml.contains("hx-post=\"/bolivia-p2p-rates/admin/refresh\""));
+        assertTrue(adminLoggedInHtml.contains("hx-post=\"/bolivia-p2p-rates/admin/clients\""));
+        assertTrue(adminLoggedInHtml.contains("hx-post=\"/bolivia-p2p-rates/admin/clients/1/toggle\""));
+        assertTrue(adminLoggedInHtml.contains("hx-delete=\"/bolivia-p2p-rates/admin/clients/1\""));
+    }
 }

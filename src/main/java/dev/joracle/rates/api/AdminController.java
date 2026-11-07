@@ -9,6 +9,7 @@ import dev.joracle.rates.service.ApiKeyService;
 import dev.joracle.rates.service.RatePollerService;
 import io.javalin.config.RoutesConfig;
 import io.javalin.http.Context;
+import io.javalin.http.Cookie;
 import io.javalin.http.HttpStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,7 +18,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 
 /**
  * Controller handling the web-based Administrator Dashboard using Thymeleaf and HTMX.
@@ -61,6 +61,7 @@ public class AdminController {
         boolean authenticated = checkAdminAuth(ctx);
         Map<String, Object> model = new HashMap<>();
         model.put("isAdminLoggedIn", authenticated);
+        model.put("publicBasePath", config.publicBasePath());
 
         if (authenticated) {
             populateDashboardModel(model, null, null);
@@ -74,20 +75,25 @@ public class AdminController {
         ApiKeyService.AuthResult auth = apiKeyService.authenticate(adminKey);
 
         if (auth.authorized() && auth.client().isAdmin()) {
-            ctx.cookie(COOKIE_ADMIN_KEY, adminKey.trim(), 60 * 60 * 24 * 7); // 7 days
-            ctx.redirect("/admin");
+            String cookiePath = config.publicBasePath().isEmpty() ? "/" : config.publicBasePath();
+            Cookie cookie = new Cookie(COOKIE_ADMIN_KEY, adminKey.trim(), cookiePath, 60 * 60 * 24 * 7, false, true);
+            ctx.cookie(cookie);
+            ctx.redirect(config.publicUrl("/admin"));
         } else {
             Map<String, Object> model = new HashMap<>();
             model.put("isAdminLoggedIn", false);
+            model.put("publicBasePath", config.publicBasePath());
             model.put("loginError", "Clave de administrador inválida o sin privilegios de ADMIN.");
             ctx.render("admin.html", model);
         }
     }
 
     private void handleLogout(Context ctx) {
+        String cookiePath = config.publicBasePath().isEmpty() ? "/" : config.publicBasePath();
+        ctx.removeCookie(COOKIE_ADMIN_KEY, cookiePath);
         ctx.removeCookie(COOKIE_ADMIN_KEY, "/admin");
         ctx.removeCookie(COOKIE_ADMIN_KEY, "/");
-        ctx.redirect("/admin");
+        ctx.redirect(config.publicUrl("/admin"));
     }
 
     private void renderRatesFragment(Context ctx) {
@@ -100,6 +106,7 @@ public class AdminController {
         RateSnapshot snapshot = rateRepository.findLatest().orElse(null);
         model.put("snapshot", snapshot);
         model.put("refreshMessage", null);
+        model.put("publicBasePath", config.publicBasePath());
         ctx.render("fragments/rates-card.html", model);
     }
 
@@ -113,6 +120,7 @@ public class AdminController {
         Map<String, Object> model = new HashMap<>();
         model.put("snapshot", rateRepository.findLatest().orElse(null));
         model.put("refreshMessage", result.executed() ? "¡Mercado actualizado!" : "Cooldown activo (" + result.cooldownRemainingSeconds() + "s restantes)");
+        model.put("publicBasePath", config.publicBasePath());
         ctx.render("fragments/rates-card.html", model);
     }
 
@@ -135,6 +143,7 @@ public class AdminController {
         Map<String, Object> model = new HashMap<>();
         model.put("clients", apiKeyService.listAllClients());
         model.put("newClientResult", creationResult);
+        model.put("publicBasePath", config.publicBasePath());
         ctx.render("fragments/clients-section.html", model);
     }
 
@@ -150,6 +159,7 @@ public class AdminController {
         Map<String, Object> model = new HashMap<>();
         model.put("clients", apiKeyService.listAllClients());
         model.put("newClientResult", null);
+        model.put("publicBasePath", config.publicBasePath());
         ctx.render("fragments/clients-section.html", model);
     }
 
@@ -165,6 +175,7 @@ public class AdminController {
         Map<String, Object> model = new HashMap<>();
         model.put("clients", apiKeyService.listAllClients());
         model.put("newClientResult", null);
+        model.put("publicBasePath", config.publicBasePath());
         ctx.render("fragments/clients-section.html", model);
     }
 
@@ -175,7 +186,9 @@ public class AdminController {
         if (paramKey != null && !paramKey.isBlank()) {
             ApiKeyService.AuthResult auth = apiKeyService.authenticate(paramKey);
             if (auth.authorized() && auth.client().isAdmin()) {
-                ctx.cookie(COOKIE_ADMIN_KEY, paramKey.trim(), 60 * 60 * 24 * 7);
+                String cookiePath = config.publicBasePath().isEmpty() ? "/" : config.publicBasePath();
+                Cookie cookie = new Cookie(COOKIE_ADMIN_KEY, paramKey.trim(), cookiePath, 60 * 60 * 24 * 7, false, true);
+                ctx.cookie(cookie);
                 return true;
             }
         }
@@ -206,5 +219,6 @@ public class AdminController {
         model.put("clients", clients);
         model.put("refreshMessage", refreshMsg);
         model.put("newClientResult", newKey);
+        model.put("publicBasePath", config.publicBasePath());
     }
 }
