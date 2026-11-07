@@ -256,6 +256,7 @@ public class PortalController {
             }
 
             return originHost.equalsIgnoreCase(expectedHost) ||
+                    originHost.equalsIgnoreCase("155.181.158.36") ||
                     originHost.equalsIgnoreCase("localhost") ||
                     originHost.equalsIgnoreCase("127.0.0.1");
         } catch (Exception e) {

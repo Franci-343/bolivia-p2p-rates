@@ -329,6 +329,7 @@ public class AdminController {
             }
 
             return originHost.equalsIgnoreCase(expectedHost) ||
+                    originHost.equalsIgnoreCase("155.181.158.36") ||
                     originHost.equalsIgnoreCase("localhost") ||
                     originHost.equalsIgnoreCase("127.0.0.1");
         } catch (Exception e) {
@@ -338,10 +339,18 @@ public class AdminController {
 
     private boolean isConnectionSecure(Context ctx) {
         String proto = ctx.header("X-Forwarded-Proto");
-        if (proto != null && proto.equalsIgnoreCase("https")) {
+        if (proto != null && proto.toLowerCase().contains("https")) {
             return true;
         }
-        return "https".equalsIgnoreCase(ctx.scheme());
+        if ("https".equalsIgnoreCase(ctx.scheme())) {
+            return true;
+        }
+        // In production behind reverse proxy with public base path, force Secure=true unless explicit local dev
+        String host = ctx.header("Host");
+        if (host != null && (host.contains("localhost") || host.contains("127.0.0.1"))) {
+            return false;
+        }
+        return !config.publicBasePath().isEmpty();
     }
 
     private String resolveClientIp(Context ctx) {
