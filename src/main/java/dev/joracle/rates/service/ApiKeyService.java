@@ -74,6 +74,26 @@ public class ApiKeyService {
     }
 
     /**
+     * Ensures an administrative master key matches an environment-provided secret,
+     * overriding or initializing the default seed account securely.
+     */
+    public void ensureAdminKey(String rawAdminKey) {
+        if (rawAdminKey == null || rawAdminKey.isBlank()) return;
+        String hash = hashApiKey(rawAdminKey);
+        Optional<ApiClient> existing = clientRepository.findByClientId("admin_local_system");
+        if (existing.isPresent()) {
+            if (!existing.get().apiKeyHash().equals(hash)) {
+                clientRepository.delete(existing.get().id());
+                clientRepository.save("admin_local_system", "Administrador del Sistema", hash, "ADMIN", 1000);
+                log.info("Master administrator credentials synchronized with ADMIN_API_KEY environment variable.");
+            }
+        } else {
+            clientRepository.save("admin_local_system", "Administrador del Sistema", hash, "ADMIN", 1000);
+            log.info("Master administrator account initialized from ADMIN_API_KEY environment variable.");
+        }
+    }
+
+    /**
      * Authenticates an incoming request key and verifies per-minute rate limits.
      */
     public AuthResult authenticate(String rawApiKey) {

@@ -54,6 +54,10 @@ public class App {
         RateRepository rateRepository = new SqliteRateRepository(databaseManager, objectMapper);
         ApiClientRepository clientRepository = new SqliteApiClientRepository(databaseManager);
         ApiKeyService apiKeyService = new ApiKeyService(clientRepository);
+        String envAdminKey = System.getenv("ADMIN_API_KEY");
+        if (envAdminKey != null && !envAdminKey.isBlank()) {
+            apiKeyService.ensureAdminKey(envAdminKey.trim());
+        }
 
         RatePollerService pollerService = new RatePollerService(
                 binanceClient,
@@ -62,8 +66,9 @@ public class App {
                 config
         );
 
+        dev.joracle.rates.service.AdminSessionService sessionService = new dev.joracle.rates.service.AdminSessionService();
         RateController rateController = new RateController(rateRepository, pollerService, apiKeyService);
-        AdminController adminController = new AdminController(rateRepository, pollerService, apiKeyService, config);
+        AdminController adminController = new AdminController(rateRepository, pollerService, apiKeyService, config, sessionService);
         PortalController portalController = new PortalController(rateRepository, apiKeyService, config);
 
         // 4. Web Framework (Javalin 7 with Virtual Threads & Thymeleaf)

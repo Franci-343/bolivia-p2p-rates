@@ -184,7 +184,7 @@ public class ThymeleafConfigTest {
         ));
         String portalHtml = engine.process("portal.html", portalContext);
         assertTrue(portalHtml.contains("href=\"/bolivia-p2p-rates/\""));
-        assertTrue(portalHtml.contains("href=\"/bolivia-p2p-rates/admin\""));
+        assertFalse(portalHtml.contains("href=\"/bolivia-p2p-rates/admin\""), "Public portal should hide admin link");
         assertTrue(portalHtml.contains("hx-post=\"/bolivia-p2p-rates/portal/keys\""));
         assertTrue(portalHtml.contains("publicBasePath = \"\\/bolivia-p2p-rates\";"));
 

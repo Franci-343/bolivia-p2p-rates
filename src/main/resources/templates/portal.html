@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bolivia P2P Rates — Portal de Desarrolladores & Wiki de la API</title>
 
+    <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -12,11 +17,28 @@
             darkMode: 'class',
             theme: {
                 extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'system-ui', '-apple-system', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace']
+                    },
                     colors: {
+                        brand: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1'
+                        },
                         slate: {
-                            850: '#151f32',
-                            950: '#070d19'
+                            850: '#111827',
+                            900: '#0b1120',
+                            950: '#060913'
                         }
+                    },
+                    boxShadow: {
+                        'glow-blue': '0 0 35px -5px rgba(56, 189, 248, 0.15)',
+                        'glow-emerald': '0 0 35px -5px rgba(52, 211, 153, 0.15)'
                     }
                 }
             }
@@ -32,128 +54,200 @@
             height: 6px;
         }
         .custom-scrollbar::-webkit-scrollbar-track {
-            background: #0f172a;
+            background: #090e17;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
             background: #334155;
-            border-radius: 3px;
+        }
+
+        /* Ambient background subtle grid */
+        .bg-grid-pattern {
+            background-size: 40px 40px;
+            background-image: 
+                linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+        }
+
+        @keyframes pulse-slow {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.85; transform: scale(1.02); }
+        }
+        .animate-pulse-slow {
+            animation: pulse-slow 3s ease-in-out infinite;
         }
     </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased selection:bg-blue-600 selection:text-white">
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased selection:bg-sky-500 selection:text-white relative overflow-x-hidden">
+
+    <!-- Ambient Gradient Orbs in Background -->
+    <div class="fixed top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[450px] bg-gradient-to-b from-sky-600/10 via-indigo-600/5 to-transparent blur-3xl pointer-events-none -z-10"></div>
+    <div class="fixed top-80 right-0 w-[500px] h-[500px] bg-emerald-600/5 blur-3xl pointer-events-none -z-10"></div>
 
     <!-- Top Sticky Navigation Bar -->
-    <header class="bg-slate-900/90 backdrop-blur-md border-b border-slate-800 sticky top-0 z-40 shadow-lg">
+    <header class="bg-slate-950/80 backdrop-blur-xl border-b border-slate-800/80 sticky top-0 z-50 shadow-sm">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex justify-between items-center">
+            
+            <!-- Logo & Brand -->
             <div class="flex items-center gap-3">
-                <span class="text-2xl">🇧🇴</span>
-                <div>
-                    <a th:href="${publicBasePath != null && !publicBasePath.isEmpty() ? publicBasePath + '/' : '/'}" href="/" class="text-base font-black text-white tracking-tight flex items-center gap-2">
-                        <span>Bolivia P2P Rates</span>
-                        <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">API REST</span>
-                    </a>
+                <a th:href="${publicBasePath != null && !publicBasePath.isEmpty() ? publicBasePath + '/' : '/'}" href="/" class="flex items-center gap-2.5 group">
+                    <span class="text-2xl transition-transform duration-300 group-hover:scale-110">🇧🇴</span>
+                    <div class="flex items-center gap-2">
+                        <span class="text-base font-extrabold text-white tracking-tight group-hover:text-sky-300 transition-colors">
+                            Bolivia P2P Rates
+                        </span>
+                        <span class="hidden sm:inline-flex text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/25">
+                            API REST
+                        </span>
+                    </div>
+                </a>
+            </div>
+
+            <!-- Ticker preview in navbar (when snapshot available) -->
+            <div th:if="${snapshot != null and snapshot.buyMarket() != null and snapshot.sellMarket() != null}" 
+                 class="hidden lg:flex items-center gap-3.5 text-xs bg-slate-900/90 border border-slate-800/90 px-3.5 py-1.5 rounded-full shadow-inner">
+                <div class="flex items-center gap-1.5">
+                    <span class="relative flex h-2 w-2">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </span>
+                    <span class="text-slate-400 font-medium">Mercado:</span>
+                </div>
+                <div class="flex items-center gap-2 font-mono">
+                    <span class="text-slate-400 text-[11px]">Compra</span>
+                    <span class="text-emerald-400 font-bold" th:text="${snapshot.buyMarket().referencePrice() + ' BOB'}">12.00 BOB</span>
+                    <span class="text-slate-700">|</span>
+                    <span class="text-slate-400 text-[11px]">Venta</span>
+                    <span class="text-sky-400 font-bold" th:text="${snapshot.sellMarket().referencePrice() + ' BOB'}">11.95 BOB</span>
                 </div>
             </div>
 
-            <!-- Ticker live rates preview if available -->
-            <div th:if="${snapshot != null and snapshot.buyMarket() != null and snapshot.sellMarket() != null}" class="hidden md:flex items-center gap-4 text-xs bg-slate-950/70 border border-slate-800 px-3.5 py-1.5 rounded-full">
-                <span class="text-slate-400">Mercado actual:</span>
-                <span class="text-emerald-400 font-mono font-semibold">Compra: <span th:text="${snapshot.buyMarket().referencePrice()}">14.85</span> BOB</span>
-                <span class="text-slate-600">|</span>
-                <span class="text-rose-400 font-mono font-semibold">Venta: <span th:text="${snapshot.sellMarket().referencePrice()}">14.92</span> BOB</span>
-            </div>
-
+            <!-- Nav Links (ADMIN BUTTON IS HIDDEN AS REQUESTED) -->
             <nav class="flex items-center gap-2 sm:gap-3 text-xs">
-                <a href="#obtener-key" class="hidden sm:inline-block px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold transition shadow-sm">
-                    Obtener API Key
-                </a>
-                <a href="#wiki" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition font-medium">
+                <a href="#wiki" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/80 transition font-medium">
                     Wiki & Endpoints
                 </a>
-                <a href="#playground" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition font-medium">
+                <a href="#playground" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/80 transition font-medium">
                     Playground
                 </a>
-                <a th:href="${(publicBasePath != null ? publicBasePath : '') + '/admin'}" href="/admin" class="px-2.5 py-1.5 rounded-lg text-slate-400 hover:text-blue-400 hover:bg-slate-800/80 transition">
-                    Admin
+                <a href="#obtener-key" 
+                   class="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold transition shadow-sm shadow-emerald-600/30 active:scale-95 flex items-center gap-1.5">
+                    <span>⚡</span>
+                    <span>Obtener API Key</span>
                 </a>
             </nav>
         </div>
     </header>
 
     <!-- Hero Section -->
-    <section class="relative overflow-hidden pt-12 pb-14 border-b border-slate-900 bg-gradient-to-b from-slate-900/50 to-slate-950">
+    <section class="relative overflow-hidden pt-12 pb-16 border-b border-slate-900 bg-grid-pattern">
         <div class="max-w-5xl mx-auto px-4 sm:px-6 text-center space-y-6">
-            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-                <span>Servicio Activo &bull; Actualización en Tiempo Real</span>
+            
+            <!-- Live Status Badge -->
+            <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 backdrop-blur-sm shadow-sm">
+                <span class="relative flex h-2 w-2">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                <span>Servicio Activo &bull; Actualización en Tiempo Real &bull; Latencia &lt; 2 ms</span>
             </div>
 
-            <h1 class="text-3xl sm:text-5xl font-black text-white tracking-tight leading-tight">
+            <!-- Main Title with polished gradient -->
+            <h1 class="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight leading-tight sm:leading-none">
                 La API de Tasas P2P para Bolivia <br class="hidden sm:inline">
-                <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-sky-300 to-emerald-400">
+                <span class="bg-gradient-to-r from-sky-400 via-blue-400 to-emerald-400 bg-clip-text text-transparent">
                     rápida, confiable y abierta.
                 </span>
             </h1>
 
-            <p class="max-w-2xl mx-auto text-sm sm:text-base text-slate-400 leading-relaxed">
-                Integra cotizaciones reales de USDT/BOB en tus bots de Telegram, aplicaciones móviles o sistemas contables. Respuestas en menos de 2 milisegundos gracias a nuestro motor de persistencia local en SQLite.
+            <p class="max-w-2xl mx-auto text-sm sm:text-base text-slate-300 font-normal leading-relaxed">
+                Integra cotizaciones reales de <strong class="text-white font-semibold">USDT/BOB</strong> en tus bots de Telegram, aplicaciones móviles o sistemas contables. Respuestas en menos de 2 milisegundos servidas directamente desde nuestro motor de persistencia local en SQLite.
             </p>
 
-            <div class="flex flex-wrap items-center justify-center gap-3 pt-2">
-                <a href="#obtener-key" class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm transition shadow-lg shadow-blue-600/20 flex items-center gap-2">
+            <!-- Action Buttons -->
+            <div class="flex flex-wrap items-center justify-center gap-3.5 pt-2">
+                <a href="#obtener-key" 
+                   class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-sm transition shadow-lg shadow-blue-600/25 active:scale-95 flex items-center gap-2">
                     <span>🔑 Generar API Key Gratis</span>
-                    <span class="text-xs font-normal opacity-80">(10 RPM)</span>
+                    <span class="text-xs font-normal opacity-85 bg-blue-700/60 px-1.5 py-0.5 rounded text-blue-100">(10 RPM)</span>
                 </a>
-                <a href="#playground" class="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-semibold text-sm transition flex items-center gap-2">
+                <a href="#playground" 
+                   class="px-5 py-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 hover:border-slate-600 text-slate-200 font-semibold text-sm transition active:scale-95 flex items-center gap-2 shadow-sm">
                     <span>⚡ Probar en Vivo</span>
                 </a>
             </div>
 
+            <!-- Quick Live Rates Snapshot Card (if available) -->
+            <div th:if="${snapshot != null and snapshot.buyMarket() != null and snapshot.sellMarket() != null}" 
+                 class="max-w-2xl mx-auto mt-6 p-4 rounded-2xl bg-slate-900/70 border border-slate-800/90 backdrop-blur-md shadow-glow-blue text-left">
+                <div class="flex items-center justify-between border-b border-slate-800/80 pb-2.5 mb-3 text-xs">
+                    <span class="text-slate-400 font-semibold uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400"></span> Cotización en Vivo (Binance P2P Bolivia)
+                    </span>
+                    <span class="text-slate-500 font-mono text-[11px]" th:text="${snapshot.timestamp()}">2026-11-07</span>
+                </div>
+                <div class="grid grid-cols-2 gap-3 text-center">
+                    <div class="bg-slate-950/70 rounded-xl p-3 border border-slate-800/60">
+                        <span class="text-[11px] text-slate-400 block mb-0.5 font-medium">Compra (Quiero BOB)</span>
+                        <span class="text-lg sm:text-xl font-bold font-mono text-emerald-400" th:text="${snapshot.buyMarket().referencePrice() + ' BOB'}">12.00 BOB</span>
+                        <span class="text-[10px] text-slate-500 block mt-0.5" th:text="${snapshot.buyMarket().validCount() + ' ofertas analizadas'}">10 ofertas</span>
+                    </div>
+                    <div class="bg-slate-950/70 rounded-xl p-3 border border-slate-800/60">
+                        <span class="text-[11px] text-slate-400 block mb-0.5 font-medium">Venta (Quiero USDT)</span>
+                        <span class="text-lg sm:text-xl font-bold font-mono text-sky-400" th:text="${snapshot.sellMarket().referencePrice() + ' BOB'}">11.95 BOB</span>
+                        <span class="text-[10px] text-slate-500 block mt-0.5" th:text="${snapshot.sellMarket().validCount() + ' ofertas analizadas'}">10 ofertas</span>
+                    </div>
+                </div>
+            </div>
+
             <!-- Features Quick Badges -->
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-8 max-w-3xl mx-auto text-left">
-                <div class="p-3 rounded-xl bg-slate-900/70 border border-slate-800/80">
-                    <span class="text-blue-400 text-lg">⚡</span>
-                    <h2 class="text-xs font-bold text-white mt-1">&lt; 2 ms Latencia</h2>
-                    <p class="text-[11px] text-slate-400 mt-0.5">Respuestas instantáneas en memoria y SQLite.</p>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3.5 pt-6 max-w-4xl mx-auto text-left">
+                <div class="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 hover:border-sky-500/30 hover:-translate-y-0.5 transition-all duration-200 shadow-sm">
+                    <div class="w-8 h-8 rounded-xl bg-sky-500/10 text-sky-400 flex items-center justify-center font-bold text-base mb-2">⚡</div>
+                    <h2 class="text-xs font-bold text-white">&lt; 2 ms Latencia</h2>
+                    <p class="text-[11px] text-slate-400 mt-0.5 leading-snug">Respuestas instantáneas servidas desde memoria y SQLite WAL.</p>
                 </div>
-                <div class="p-3 rounded-xl bg-slate-900/70 border border-slate-800/80">
-                    <span class="text-emerald-400 text-lg">🏦</span>
-                    <h2 class="text-xs font-bold text-white mt-1">Por Bancos</h2>
-                    <p class="text-[11px] text-slate-400 mt-0.5">Unión, BISA, BNB, Mercantil, Sol y más.</p>
+                <div class="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 hover:border-emerald-500/30 hover:-translate-y-0.5 transition-all duration-200 shadow-sm">
+                    <div class="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold text-base mb-2">🏦</div>
+                    <h2 class="text-xs font-bold text-white">Desglose Bancario</h2>
+                    <p class="text-[11px] text-slate-400 mt-0.5 leading-snug">Unión, BISA, BNB, Mercantil, Banco Sol y más.</p>
                 </div>
-                <div class="p-3 rounded-xl bg-slate-900/70 border border-slate-800/80">
-                    <span class="text-purple-400 text-lg">🛡️</span>
-                    <h2 class="text-xs font-bold text-white mt-1">Alta Resiliencia</h2>
-                    <p class="text-[11px] text-slate-400 mt-0.5">Sin saturar Binance. Polling desacoplado.</p>
+                <div class="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 hover:border-indigo-500/30 hover:-translate-y-0.5 transition-all duration-200 shadow-sm">
+                    <div class="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center font-bold text-base mb-2">🛡️</div>
+                    <h2 class="text-xs font-bold text-white">Alta Resiliencia</h2>
+                    <p class="text-[11px] text-slate-400 mt-0.5 leading-snug">Sin saturar Binance. Polling desacoplado en segundo plano.</p>
                 </div>
-                <div class="p-3 rounded-xl bg-slate-900/70 border border-slate-800/80">
-                    <span class="text-amber-400 text-lg">✨</span>
-                    <h2 class="text-xs font-bold text-white mt-1">100% Gratuito</h2>
-                    <p class="text-[11px] text-slate-400 mt-0.5">Genera tu llave y empieza en 5 segundos.</p>
+                <div class="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 hover:border-amber-500/30 hover:-translate-y-0.5 transition-all duration-200 shadow-sm">
+                    <div class="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center font-bold text-base mb-2">✨</div>
+                    <h2 class="text-xs font-bold text-white">100% Gratuito</h2>
+                    <p class="text-[11px] text-slate-400 mt-0.5 leading-snug">Genera tu llave y empieza a programar en 5 segundos.</p>
                 </div>
             </div>
         </div>
     </section>
 
     <!-- Main Container -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-16">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-16">
 
         <!-- SECTION 1: Self-Service Key Generator Card -->
         <section id="obtener-key" class="max-w-3xl mx-auto scroll-mt-24">
-            <div class="bg-gradient-to-b from-slate-900 to-slate-900/80 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
-                <div class="absolute -right-12 -top-12 w-48 h-48 bg-blue-600/10 rounded-full blur-3xl pointer-events-none"></div>
+            <div class="bg-gradient-to-b from-slate-900/90 to-slate-900/50 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden backdrop-blur-sm">
+                <div class="absolute -right-12 -top-12 w-48 h-48 bg-sky-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
                 <div class="flex items-start justify-between gap-4 mb-6">
                     <div>
                         <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 mb-2">
-                            <span>Plan Free Desarrollador</span>
+                            <span>Plan Gratuito para Desarrolladores</span>
                         </div>
                         <h2 class="text-xl sm:text-2xl font-black text-white tracking-tight">Crea tu API Key de Acceso</h2>
-                        <p class="text-xs text-slate-400 mt-1">
-                            Sin tarjetas ni registros complejos. Asignamos inmediatamente <strong>10 peticiones/minuto</strong> para cuidar los recursos de nuestro servidor Always Free.
+                        <p class="text-xs text-slate-400 mt-1 leading-relaxed">
+                            Sin tarjetas ni registros engorrosos. Asignamos inmediatamente <strong class="text-slate-200">10 peticiones/minuto</strong> por cada clave para cuidar los recursos de nuestro servidor.
                         </p>
                     </div>
-                    <span class="text-3xl hidden sm:block">🔑</span>
+                    <span class="text-3xl hidden sm:block p-3 rounded-2xl bg-slate-800/60 border border-slate-700/60">🔑</span>
                 </div>
 
                 <!-- HTMX Form for Key Generation -->
@@ -164,22 +258,25 @@
                       class="space-y-4">
                     <div>
                         <label class="block text-xs font-semibold text-slate-300 mb-1.5">
-                            Nombre de tu Aplicación o Proyecto:
+                            Nombre de tu Aplicación, Bot o Proyecto:
                         </label>
-                        <div class="flex flex-col sm:flex-row gap-2">
+                        <div class="flex flex-col sm:flex-row gap-2.5">
                             <input type="text" name="clientName" required
-                                   placeholder="Ej: MiBotDeTasasTelegram, AppFinanzas, Juan"
-                                   maxlength="50"
-                                   class="flex-1 bg-slate-950 border border-slate-700 rounded-xl text-sm text-white px-4 py-2.5 focus:border-blue-500 focus:outline-none transition">
+                                   placeholder="Ej: TelegramAlertBot, AppFinanzas, CarlosDev"
+                                   maxlength="40"
+                                   pattern="^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ _.-]{2,40}$"
+                                   title="Entre 2 y 40 caracteres alfanuméricos"
+                                   class="flex-1 bg-slate-950/80 border border-slate-700 rounded-xl text-sm text-white px-4 py-2.5 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 focus:outline-none transition">
                             <button type="submit"
-                                    class="py-2.5 px-6 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm rounded-xl transition shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 shrink-0">
+                                    class="py-2.5 px-6 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-sm rounded-xl transition shadow-lg shadow-emerald-600/20 active:scale-95 flex items-center justify-center gap-2 shrink-0">
                                 <span>Generar API Key</span>
                                 <span class="htmx-indicator animate-spin">⟳</span>
                             </button>
                         </div>
-                        <p class="text-[11px] text-slate-500 mt-1.5">
-                            * Máximo 5 llaves por hora por dirección IP para prevenir abusos.
-                        </p>
+                        <div class="flex items-center gap-2 text-[11px] text-slate-500 mt-2">
+                            <span>🛡️</span>
+                            <span>Protección anti-abuso: Máximo 5 llaves por hora por dirección IP.</span>
+                        </div>
                     </div>
                 </form>
 
@@ -190,22 +287,32 @@
 
         <!-- SECTION 2: Live Interactive API Playground -->
         <section id="playground" class="scroll-mt-24">
-            <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl">
-                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-6 border-b border-slate-800">
-                    <div>
-                        <h2 class="text-xl font-black text-white tracking-tight flex items-center gap-2">
-                            <span>⚡ Playground en Vivo</span>
-                            <span class="text-xs font-semibold text-slate-400 bg-slate-800 px-2.5 py-0.5 rounded-full border border-slate-700">Test en Navegador</span>
-                        </h2>
-                        <p class="text-xs text-slate-400 mt-1">Prueba los endpoints en tiempo real enviando tu API Key directamente desde esta página.</p>
+            <div class="bg-slate-900/80 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl backdrop-blur-sm">
+                
+                <!-- Playground Title Bar (macOS style dots) -->
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-5 border-b border-slate-800">
+                    <div class="flex items-center gap-3">
+                        <div class="flex items-center gap-1.5 px-1">
+                            <span class="w-3 h-3 rounded-full bg-rose-500/80 inline-block"></span>
+                            <span class="w-3 h-3 rounded-full bg-amber-500/80 inline-block"></span>
+                            <span class="w-3 h-3 rounded-full bg-emerald-500/80 inline-block"></span>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-black text-white tracking-tight flex items-center gap-2">
+                                <span>⚡ Playground en Vivo</span>
+                                <span class="text-[11px] font-semibold text-sky-400 bg-sky-500/10 px-2.5 py-0.5 rounded-full border border-sky-500/20">Consola Interactiva</span>
+                            </h2>
+                            <p class="text-xs text-slate-400 mt-0.5">Prueba los endpoints en tiempo real enviando peticiones directamente desde tu navegador.</p>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Playground Controls -->
-                <div class="grid grid-cols-1 md:grid-cols-12 gap-3 mb-4">
-                    <div class="md:col-span-3">
-                        <label class="block text-[11px] font-semibold text-slate-400 mb-1">Método & Endpoint</label>
-                        <select id="playgroundEndpoint" class="w-full bg-slate-950 border border-slate-700 rounded-xl text-xs sm:text-sm text-white px-3 py-2.5 focus:border-blue-500 focus:outline-none font-mono">
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-3.5 mb-4">
+                    <div class="md:col-span-4">
+                        <label class="block text-[11px] font-semibold text-slate-400 mb-1.5">Método & Endpoint</label>
+                        <select id="playgroundEndpoint" 
+                                class="w-full bg-slate-950 border border-slate-700/80 rounded-xl text-xs sm:text-sm text-white px-3 py-2.5 focus:border-sky-500 focus:outline-none font-mono">
                             <option value="/api/v1/rates/latest">GET /api/v1/rates/latest</option>
                             <option value="/api/v1/rates/buy">GET /api/v1/rates/buy</option>
                             <option value="/api/v1/rates/sell">GET /api/v1/rates/sell</option>
@@ -215,19 +322,21 @@
                         </select>
                     </div>
 
-                    <div class="md:col-span-6">
-                        <label class="block text-[11px] font-semibold text-slate-400 mb-1">
-                            Tu API Key (o usa la demo preconfigurada)
+                    <div class="md:col-span-5">
+                        <label class="block text-[11px] font-semibold text-slate-400 mb-1.5">
+                            Tu API Key (o usa la clave demo predeterminada)
                         </label>
-                        <input type="text" id="playgroundApiKey"
-                               th:value="${defaultDemoKey}"
-                               placeholder="bolivia_live_..."
-                               class="w-full bg-slate-950 border border-slate-700 rounded-xl text-xs sm:text-sm text-emerald-400 px-3.5 py-2.5 focus:border-blue-500 focus:outline-none font-mono">
+                        <div class="relative">
+                            <input type="text" id="playgroundApiKey"
+                                   th:value="${defaultDemoKey}"
+                                   placeholder="bolivia_live_..."
+                                   class="w-full bg-slate-950 border border-slate-700/80 rounded-xl text-xs sm:text-sm text-emerald-400 px-3.5 py-2.5 focus:border-sky-500 focus:ring-1 focus:ring-sky-500/30 focus:outline-none font-mono">
+                        </div>
                     </div>
 
                     <div class="md:col-span-3 flex items-end">
                         <button type="button" onclick="executePlaygroundRequest()"
-                                class="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm rounded-xl transition shadow flex items-center justify-center gap-2">
+                                class="w-full py-2.5 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-sm rounded-xl transition shadow shadow-blue-600/30 active:scale-95 flex items-center justify-center gap-2">
                             <span>Enviar Petición</span>
                             <span id="playgroundSpinner" class="hidden animate-spin">⟳</span>
                         </button>
@@ -235,18 +344,21 @@
                 </div>
 
                 <!-- Playground Output Box -->
-                <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4 font-mono text-xs overflow-hidden">
+                <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4 font-mono text-xs overflow-hidden shadow-inner">
                     <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-800/80 text-[11px]">
-                        <div class="flex items-center gap-2">
-                            <span class="text-slate-400">Respuesta HTTP:</span>
+                        <div class="flex items-center gap-2.5">
+                            <span class="text-slate-400">Estado HTTP:</span>
                             <span id="playgroundStatus" class="font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-300">--</span>
-                            <span id="playgroundTime" class="text-slate-500">0 ms</span>
+                            <span id="playgroundTime" class="text-slate-500 flex items-center gap-1 font-mono">
+                                <span>⚡</span> <span>0 ms</span>
+                            </span>
                         </div>
-                        <button type="button" onclick="copyPlaygroundJson()" class="text-slate-400 hover:text-white transition flex items-center gap-1">
-                            <span>Copiar JSON</span>
+                        <button type="button" onclick="copyPlaygroundJson()" 
+                                class="text-xs text-slate-400 hover:text-sky-300 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-lg transition flex items-center gap-1.5">
+                            <span id="copyJsonText">Copiar JSON</span>
                         </button>
                     </div>
-                    <pre id="playgroundOutput" class="text-slate-300 overflow-x-auto max-h-72 custom-scrollbar whitespace-pre leading-relaxed">{
+                    <pre id="playgroundOutput" class="text-slate-300 overflow-x-auto max-h-80 custom-scrollbar whitespace-pre leading-relaxed font-mono">{
   "mensaje": "Selecciona un endpoint y presiona 'Enviar Petición' para ver el JSON en tiempo real."
 }</pre>
                 </div>
@@ -257,103 +369,124 @@
         <section id="wiki" class="scroll-mt-24 space-y-10">
             <div class="border-b border-slate-800 pb-4">
                 <h2 class="text-2xl font-black text-white tracking-tight">📖 Wiki de la API & Documentación</h2>
-                <p class="text-xs sm:text-sm text-slate-400 mt-1">Guía técnica completa para integrar los servicios en cualquier lenguaje de programación.</p>
+                <p class="text-xs sm:text-sm text-slate-400 mt-1">Guía técnica completa para integrar los servicios en Telegram, bots de Discord, Python, Node.js y más.</p>
             </div>
 
             <!-- 1. Authentication Concept -->
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+            <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 space-y-4 backdrop-blur-sm">
                 <h3 class="text-base font-bold text-white flex items-center gap-2">
-                    <span class="text-blue-400">#</span> Autenticación & Cabeceras
+                    <span class="text-sky-400">#</span> Autenticación & Cabeceras HTTP
                 </h3>
                 <p class="text-xs text-slate-300 leading-relaxed">
-                    Todas las solicitudes a las rutas de tasas (<code class="text-emerald-400">/api/v1/rates/*</code>) requieren una API Key activa. Puedes suministrarla mediante la cabecera HTTP estándar o a través de la URL:
+                    Todas las solicitudes a las rutas de tasas (<code class="text-emerald-400 font-mono">/api/v1/rates/*</code>) requieren una API Key activa. Puedes suministrarla mediante la cabecera estándar (recomendada) o mediante parámetro de consulta:
                 </p>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono">
-                    <div class="bg-slate-950 border border-slate-800 rounded-xl p-3.5 space-y-1">
+                    <div class="bg-slate-950 border border-slate-800/90 rounded-xl p-3.5 space-y-1">
                         <span class="text-[10px] text-slate-500 font-sans uppercase font-bold tracking-wider">Opción 1: Cabecera HTTP (Recomendada)</span>
-                        <div class="text-blue-300 font-semibold">X-API-Key: bolivia_live_TU_CLAVE</div>
+                        <div class="text-sky-300 font-semibold">X-API-Key: bolivia_live_TU_CLAVE</div>
                     </div>
-                    <div class="bg-slate-950 border border-slate-800 rounded-xl p-3.5 space-y-1">
+                    <div class="bg-slate-950 border border-slate-800/90 rounded-xl p-3.5 space-y-1">
                         <span class="text-[10px] text-slate-500 font-sans uppercase font-bold tracking-wider">Opción 2: Parámetro de Consulta (Query Param)</span>
                         <div class="text-emerald-300 font-semibold">?apiKey=bolivia_live_TU_CLAVE</div>
                     </div>
                 </div>
 
-                <div class="p-3 bg-slate-950/60 border border-slate-800 rounded-xl text-xs text-slate-400 flex items-start gap-2.5">
+                <div class="p-3 bg-slate-950/60 border border-slate-800 rounded-xl text-xs text-slate-300 flex items-start gap-2.5">
                     <span class="text-amber-400 text-sm">ℹ️</span>
                     <div>
-                        <strong>Rate Limiting (Control de Cuota):</strong>
-                        El nivel gratuito permite <strong>10 peticiones por minuto (RPM)</strong> por cada llave. Si se excede la cuota en una ventana de 60 segundos, la API responderá con el código <code class="text-rose-400 font-mono">429 Too Many Requests</code>.
+                        <strong class="text-white">Rate Limiting (Control de Cuota):</strong>
+                        El nivel gratuito asigna <strong class="text-sky-400">10 peticiones por minuto (RPM)</strong> por cada llave. Si se supera la cuota en una ventana de 60 segundos, la API responderá con el código <code class="text-rose-400 font-mono">429 Too Many Requests</code>.
                     </div>
                 </div>
             </div>
 
             <!-- 2. Endpoint: GET /api/v1/rates/latest -->
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-5">
+            <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 space-y-5 backdrop-blur-sm">
                 <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
                     <div class="flex items-center gap-2.5">
-                        <span class="px-2.5 py-1 rounded bg-blue-500/20 text-blue-400 font-mono text-xs font-bold">GET</span>
+                        <span class="px-2.5 py-1 rounded bg-sky-500/20 text-sky-400 font-mono text-xs font-bold border border-sky-500/30">GET</span>
                         <span class="font-mono text-sm sm:text-base font-bold text-white">/api/v1/rates/latest</span>
                     </div>
-                    <span class="text-xs text-slate-400">Tasas consolidadas + desglose bancario</span>
+                    <span class="text-xs text-slate-400">Tasas consolidadas + desglose bancario nacional</span>
                 </div>
 
-                <p class="text-xs text-slate-300">
-                    Retorna el snapshot de mercado más reciente con el promedio general ponderado, margen de spread y la cotización específica de cada entidad financiera boliviana (Banco Unión, BISA, Banco Mercantil Santa Cruz, BNB, Banco Sol, etc.).
+                <p class="text-xs text-slate-300 leading-relaxed">
+                    Retorna el snapshot de mercado más reciente con el promedio general ponderado, margen de spread y la cotización específica de cada entidad financiera boliviana (Banco Unión, BISA, Banco Mercantil Santa Cruz, BNB, Banco Sol, Banco Ganadero, etc.).
                 </p>
 
-                <!-- Code Samples Tabbed or Stacked -->
-                <div class="space-y-3">
-                    <div class="flex items-center justify-between text-xs text-slate-400">
-                        <span class="font-semibold text-slate-300">Ejemplos de Consumo:</span>
+                <!-- Interactive Code Snippets Tabs -->
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between text-xs">
+                        <!-- Language Switcher Tabs -->
+                        <div class="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
+                            <button type="button" onclick="switchCodeTab('curl')" id="tab-curl" 
+                                    class="px-3 py-1 rounded-lg text-xs font-semibold bg-slate-800 text-white transition">
+                                cURL
+                            </button>
+                            <button type="button" onclick="switchCodeTab('js')" id="tab-js" 
+                                    class="px-3 py-1 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition">
+                                JavaScript
+                            </button>
+                            <button type="button" onclick="switchCodeTab('py')" id="tab-py" 
+                                    class="px-3 py-1 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition">
+                                Python
+                            </button>
+                        </div>
+                        <button type="button" onclick="copyCurrentCodeSnippet()" 
+                                class="text-xs text-slate-400 hover:text-white flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700/80 transition">
+                            <span id="copySnippetText">Copiar código</span>
+                        </button>
                     </div>
 
-                    <!-- cURL -->
-                    <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 font-mono text-xs text-slate-300 overflow-x-auto">
-                        <span class="text-slate-500 block mb-1"># cURL (Terminal / Bash)</span>
-                        <code>curl -H "X-API-Key: bolivia_live_..." <span class="base-url-text" th:text="${baseUrl}">http://155.181.158.36:8080</span>/api/v1/rates/latest</code>
+                    <!-- cURL Tab Content -->
+                    <div id="content-curl" class="bg-slate-950 border border-slate-800 rounded-xl p-3.5 font-mono text-xs text-slate-300 overflow-x-auto">
+                        <span class="text-slate-500 block mb-1"># Terminal / Bash</span>
+                        <code id="snippet-curl">curl -H "X-API-Key: bolivia_live_..." <span class="base-url-text" th:text="${baseUrl}">http://155.181.158.36:8080</span>/api/v1/rates/latest</code>
                     </div>
 
-                    <!-- JavaScript -->
-                    <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 font-mono text-xs text-slate-300 overflow-x-auto">
+                    <!-- JS Tab Content -->
+                    <div id="content-js" class="hidden bg-slate-950 border border-slate-800 rounded-xl p-3.5 font-mono text-xs text-slate-300 overflow-x-auto leading-relaxed">
                         <span class="text-slate-500 block mb-1">// JavaScript (Node.js / Navegador)</span>
-                        <code>const res = await fetch('<span class="base-url-text" th:text="${baseUrl}">http://155.181.158.36:8080</span>/api/v1/rates/latest', {
+                        <code id="snippet-js">const res = await fetch('<span class="base-url-text" th:text="${baseUrl}">http://155.181.158.36:8080</span>/api/v1/rates/latest', {
   headers: { 'X-API-Key': 'bolivia_live_...' }
 });
 const data = await res.json();
 console.log('Compra USDT:', data.buyMarket.referencePrice, 'Venta USDT:', data.sellMarket.referencePrice);</code>
                     </div>
 
-                    <!-- Python -->
-                    <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 font-mono text-xs text-slate-300 overflow-x-auto">
-                        <span class="text-slate-500 block mb-1"># Python (requests)</span>
-                        <code>import requests
-res = requests.get('<span class="base-url-text" th:text="${baseUrl}">http://155.181.158.36:8080</span>/api/v1/rates/latest', headers={'X-API-Key': 'bolivia_live_...'})
-print(res.json()['buyMarket']['referencePrice'])</code>
+                    <!-- Python Tab Content -->
+                    <div id="content-py" class="hidden bg-slate-950 border border-slate-800 rounded-xl p-3.5 font-mono text-xs text-slate-300 overflow-x-auto leading-relaxed">
+                        <span class="text-slate-500 block mb-1"># Python 3 (requests)</span>
+                        <code id="snippet-py">import requests
+
+url = '<span class="base-url-text" th:text="${baseUrl}">http://155.181.158.36:8080</span>/api/v1/rates/latest'
+headers = {'X-API-Key': 'bolivia_live_...'}
+data = requests.get(url, headers=headers).json()
+print("Compra:", data['buyMarket']['referencePrice'], "Venta:", data['sellMarket']['referencePrice'])</code>
                     </div>
                 </div>
 
-                <!-- Example Response -->
-                <div class="space-y-1.5">
+                <!-- Example Response JSON -->
+                <div class="space-y-1.5 pt-2">
                     <span class="text-xs font-semibold text-slate-400">Ejemplo de Respuesta JSON (200 OK):</span>
-                    <pre class="bg-slate-950 border border-slate-800 rounded-xl p-4 font-mono text-xs text-emerald-400/90 overflow-x-auto leading-relaxed">{
-  "globalBuyRate": 14.85,
-  "globalSellRate": 14.92,
-  "spread": 0.07,
-  "spreadPercentage": 0.47,
-  "polledAt": "2026-11-03T17:40:00Z",
+                    <pre class="bg-slate-950 border border-slate-800 rounded-xl p-4 font-mono text-xs text-emerald-400/90 overflow-x-auto leading-relaxed max-h-72 custom-scrollbar">{
+  "globalBuyRate": 12.00,
+  "globalSellRate": 11.95,
+  "spread": 0.05,
+  "spreadPercentage": 0.42,
+  "polledAt": "2026-11-07T15:30:00Z",
   "bankSummaries": [
     {
       "bankName": "BANCO_UNION",
-      "buyRate": 14.84,
-      "sellRate": 14.90,
+      "buyRate": 12.01,
+      "sellRate": 11.94,
       "offerCount": 18
     },
     {
       "bankName": "BANCO_BISA",
-      "buyRate": 14.85,
-      "sellRate": 14.93,
+      "buyRate": 12.00,
+      "sellRate": 11.95,
       "offerCount": 12
     }
   ]
@@ -364,80 +497,82 @@ print(res.json()['buyMarket']['referencePrice'])</code>
             <!-- 3. Other Endpoints Summary Cards -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <!-- Endpoint Buy -->
-                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3">
+                <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 space-y-3 backdrop-blur-sm">
                     <div class="flex items-center gap-2">
-                        <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-mono text-xs font-bold">GET</span>
+                        <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-mono text-xs font-bold border border-emerald-500/30">GET</span>
                         <span class="font-mono text-xs font-bold text-white">/api/v1/rates/buy</span>
                     </div>
-                    <p class="text-xs text-slate-400">
+                    <p class="text-xs text-slate-400 leading-relaxed">
                         Lista detallada de las mejores ofertas activas de compra (usuarios que compran USDT pagando con BOB). Incluye límites y métodos de pago.
                     </p>
-                    <div class="font-mono text-[11px] text-slate-400 bg-slate-950 p-2 rounded-lg truncate">
+                    <div class="font-mono text-[11px] text-slate-400 bg-slate-950 p-2.5 rounded-xl border border-slate-800/80 truncate">
                         <code>curl -H "X-API-Key: ..." <span class="base-url-text" th:text="${baseUrl}">http://155.181.158.36:8080</span>/api/v1/rates/buy</code>
                     </div>
                 </div>
 
                 <!-- Endpoint Sell -->
-                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3">
+                <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 space-y-3 backdrop-blur-sm">
                     <div class="flex items-center gap-2">
-                        <span class="px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 font-mono text-xs font-bold">GET</span>
+                        <span class="px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 font-mono text-xs font-bold border border-rose-500/30">GET</span>
                         <span class="font-mono text-xs font-bold text-white">/api/v1/rates/sell</span>
                     </div>
-                    <p class="text-xs text-slate-400">
+                    <p class="text-xs text-slate-400 leading-relaxed">
                         Lista detallada de ofertas activas de venta (usuarios que venden USDT a cambio de BOB). Ideal para conocer el precio real de salida.
                     </p>
-                    <div class="font-mono text-[11px] text-slate-400 bg-slate-950 p-2 rounded-lg truncate">
+                    <div class="font-mono text-[11px] text-slate-400 bg-slate-950 p-2.5 rounded-xl border border-slate-800/80 truncate">
                         <code>curl -H "X-API-Key: ..." <span class="base-url-text" th:text="${baseUrl}">http://155.181.158.36:8080</span>/api/v1/rates/sell</code>
                     </div>
                 </div>
 
                 <!-- Endpoint History -->
-                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3">
+                <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 space-y-3 backdrop-blur-sm">
                     <div class="flex items-center gap-2">
-                        <span class="px-2 py-0.5 rounded bg-purple-500/20 text-purple-400 font-mono text-xs font-bold">GET</span>
+                        <span class="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-400 font-mono text-xs font-bold border border-indigo-500/30">GET</span>
                         <span class="font-mono text-xs font-bold text-white">/api/v1/rates/history</span>
                     </div>
-                    <p class="text-xs text-slate-400">
+                    <p class="text-xs text-slate-400 leading-relaxed">
                         Serie histórica de cotizaciones guardadas en SQLite para análisis de tendencias, gráficas financieras o backtesting de algoritmos.
                     </p>
-                    <div class="font-mono text-[11px] text-slate-400 bg-slate-950 p-2 rounded-lg truncate">
+                    <div class="font-mono text-[11px] text-slate-400 bg-slate-950 p-2.5 rounded-xl border border-slate-800/80 truncate">
                         <code>curl -H "X-API-Key: ..." <span class="base-url-text" th:text="${baseUrl}">http://155.181.158.36:8080</span>/api/v1/rates/history</code>
                     </div>
                 </div>
             </div>
 
             <!-- 4. HTTP Codes Table -->
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
-                <h3 class="text-sm font-bold text-white">Códigos de Estado HTTP</h3>
+            <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 space-y-4 backdrop-blur-sm">
+                <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                    <span class="text-sky-400">#</span> Códigos de Estado HTTP de la API
+                </h3>
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-xs">
                         <thead>
                             <tr class="border-b border-slate-800 text-slate-400">
-                                <th class="pb-2 font-semibold">Código</th>
-                                <th class="pb-2 font-semibold">Significado</th>
-                                <th class="pb-2 font-semibold">Motivo Común</th>
+                                <th class="pb-2.5 font-semibold">Código</th>
+                                <th class="pb-2.5 font-semibold">Significado</th>
+                                <th class="pb-2.5 font-semibold">Motivo Común</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-800/60 font-mono">
                             <tr>
                                 <td class="py-2.5 text-emerald-400 font-bold">200 OK</td>
-                                <td class="py-2.5 text-slate-300 font-sans">Petición exitosa</td>
-                                <td class="py-2.5 text-slate-400 font-sans">Retorna el JSON solicitado.</td>
+                                <td class="py-2.5 text-slate-200 font-sans font-medium">Petición exitosa</td>
+                                <td class="py-2.5 text-slate-400 font-sans">Retorna el objeto JSON con las cotizaciones actualizadas.</td>
                             </tr>
                             <tr>
                                 <td class="py-2.5 text-amber-400 font-bold">401 Unauthorized</td>
-                                <td class="py-2.5 text-slate-300 font-sans">No autorizado</td>
+                                <td class="py-2.5 text-slate-200 font-sans font-medium">No autorizado</td>
                                 <td class="py-2.5 text-slate-400 font-sans">Falta la cabecera `X-API-Key` o la clave no existe o está desactivada.</td>
                             </tr>
                             <tr>
                                 <td class="py-2.5 text-rose-400 font-bold">429 Too Many Requests</td>
-                                <td class="py-2.5 text-slate-300 font-sans">Límite excedido</td>
+                                <td class="py-2.5 text-slate-200 font-sans font-medium">Límite excedido</td>
                                 <td class="py-2.5 text-slate-400 font-sans">Se superaron las 10 peticiones en la ventana de 1 minuto.</td>
                             </tr>
                             <tr>
                                 <td class="py-2.5 text-slate-400 font-bold">500 Server Error</td>
-                                <td class="py-2.5 text-slate-300 font-sans">Error interno</td>
-                                <td class="py-2.5 text-slate-400 font-sans">Excepción no controlada en el servidor.</td>
+                                <td class="py-2.5 text-slate-200 font-sans font-medium">Error interno</td>
+                                <td class="py-2.5 text-slate-400 font-sans">Excepción no controlada en el servicio.</td>
                             </tr>
                         </tbody>
                     </table>
@@ -447,15 +582,26 @@ print(res.json()['buyMarket']['referencePrice'])</code>
     </div>
 
     <!-- Footer -->
-    <footer class="border-t border-slate-900 bg-slate-950 py-8 text-center text-xs text-slate-500 space-y-2">
-        <p>Bolivia P2P Rates Monitor &bull; Desarrollado con Java 25 &bull; Javalin 7 &bull; SQLite WAL &bull; HTMX</p>
-        <p class="text-[11px] text-slate-600">Servido de forma eficiente y optimizada para arquitectura Oracle Always Free (1 OCPU / 1 GB RAM).</p>
+    <footer class="border-t border-slate-900 bg-slate-950 py-10 text-center text-xs text-slate-500 space-y-3">
+        <div class="flex items-center justify-center gap-2 text-slate-400 font-medium">
+            <span>🇧🇴 Bolivia P2P Rates Monitor</span>
+            <span>&bull;</span>
+            <span>Arquitectura Oracle Always Free</span>
+        </div>
+        <div class="flex flex-wrap items-center justify-center gap-2 text-[11px] text-slate-600">
+            <span class="px-2 py-0.5 rounded bg-slate-900 border border-slate-800">Java 25</span>
+            <span class="px-2 py-0.5 rounded bg-slate-900 border border-slate-800">Javalin 7</span>
+            <span class="px-2 py-0.5 rounded bg-slate-900 border border-slate-800">Caddy 2.11 HTTPS</span>
+            <span class="px-2 py-0.5 rounded bg-slate-900 border border-slate-800">SQLite WAL</span>
+            <span class="px-2 py-0.5 rounded bg-slate-900 border border-slate-800">HTMX 2.0</span>
+        </div>
     </footer>
 
-    <!-- Interactive Playground Script -->
+    <!-- Interactive Scripts -->
     <script th:inline="javascript">
         const publicBasePath = /*[[${publicBasePath != null ? publicBasePath : ''}]]*/ '';
 
+        // Auto-detect current browser base URL and update code examples
         document.addEventListener('DOMContentLoaded', () => {
             const currentOrigin = window.location.origin;
             const fullBaseUrl = currentOrigin && !currentOrigin.includes('null')
@@ -467,6 +613,34 @@ print(res.json()['buyMarket']['referencePrice'])</code>
                 });
             }
         });
+
+        // Tab switcher for code snippets
+        let activeTab = 'curl';
+        function switchCodeTab(lang) {
+            activeTab = lang;
+            ['curl', 'js', 'py'].forEach(t => {
+                const tabBtn = document.getElementById('tab-' + t);
+                const contentEl = document.getElementById('content-' + t);
+                if (t === lang) {
+                    tabBtn.className = 'px-3 py-1 rounded-lg text-xs font-semibold bg-slate-800 text-white transition';
+                    contentEl.classList.remove('hidden');
+                } else {
+                    tabBtn.className = 'px-3 py-1 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition';
+                    contentEl.classList.add('hidden');
+                }
+            });
+        }
+
+        function copyCurrentCodeSnippet() {
+            const snippetEl = document.getElementById('snippet-' + activeTab);
+            if (snippetEl) {
+                navigator.clipboard.writeText(snippetEl.textContent);
+                const btnText = document.getElementById('copySnippetText');
+                const orig = btnText.textContent;
+                btnText.textContent = '¡Copiado!';
+                setTimeout(() => { btnText.textContent = orig; }, 2000);
+            }
+        }
 
         function loadKeyIntoPlayground(key) {
             const input = document.getElementById('playgroundApiKey');
@@ -502,22 +676,22 @@ print(res.json()['buyMarket']['referencePrice'])</code>
 
                 const data = await response.json();
                 statusEl.textContent = `${response.status} ${response.statusText || ''}`;
-                timeEl.textContent = `${duration} ms`;
+                timeEl.innerHTML = `<span>⚡</span> <span>${duration} ms</span>`;
 
                 if (response.ok) {
-                    statusEl.className = 'font-bold px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800';
+                    statusEl.className = 'font-bold px-2.5 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800';
                 } else if (response.status === 401 || response.status === 429) {
-                    statusEl.className = 'font-bold px-2 py-0.5 rounded bg-amber-950 text-amber-400 border border-amber-800';
+                    statusEl.className = 'font-bold px-2.5 py-0.5 rounded-full bg-amber-950 text-amber-400 border border-amber-800';
                 } else {
-                    statusEl.className = 'font-bold px-2 py-0.5 rounded bg-rose-950 text-rose-400 border border-rose-800';
+                    statusEl.className = 'font-bold px-2.5 py-0.5 rounded-full bg-rose-950 text-rose-400 border border-rose-800';
                 }
 
                 outputEl.textContent = JSON.stringify(data, null, 2);
             } catch (err) {
                 const endTime = performance.now();
-                timeEl.textContent = `${Math.round(endTime - startTime)} ms`;
+                timeEl.innerHTML = `<span>⚡</span> <span>${Math.round(endTime - startTime)} ms</span>`;
                 statusEl.textContent = 'ERROR DE RED';
-                statusEl.className = 'font-bold px-2 py-0.5 rounded bg-rose-950 text-rose-400 border border-rose-800';
+                statusEl.className = 'font-bold px-2.5 py-0.5 rounded-full bg-rose-950 text-rose-400 border border-rose-800';
                 outputEl.textContent = JSON.stringify({ error: err.message }, null, 2);
             } finally {
                 spinner.classList.add('hidden');
@@ -527,7 +701,10 @@ print(res.json()['buyMarket']['referencePrice'])</code>
         function copyPlaygroundJson() {
             const text = document.getElementById('playgroundOutput').textContent;
             navigator.clipboard.writeText(text);
-            alert('¡JSON copiado al portapapeles!');
+            const btn = document.getElementById('copyJsonText');
+            const orig = btn.textContent;
+            btn.textContent = '¡Copiado!';
+            setTimeout(() => { btn.textContent = orig; }, 2000);
         }
     </script>
 </body>

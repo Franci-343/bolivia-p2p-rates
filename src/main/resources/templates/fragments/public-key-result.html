@@ -1,46 +1,55 @@
-<div th:if="${!success}" class="p-4 rounded-xl bg-rose-950/80 border border-rose-800 text-rose-200 text-xs flex items-start gap-3 animate-fade-in">
+<div th:if="${!success}" class="p-4 rounded-2xl bg-rose-950/80 border border-rose-800 text-rose-200 text-xs flex items-start gap-3 shadow-lg">
     <span class="text-rose-400 text-base">⚠️</span>
     <div class="flex-1">
-        <p class="font-bold text-rose-100">No se pudo generar la API Key</p>
-        <p class="mt-0.5 text-rose-300" th:text="${errorMessage}">Error al procesar la solicitud.</p>
+        <p class="font-bold text-rose-100 text-sm">No se pudo generar la API Key</p>
+        <p class="mt-0.5 text-rose-300 leading-relaxed" th:text="${errorMessage}">Error al procesar la solicitud.</p>
     </div>
 </div>
 
-<div th:if="${success}" class="p-5 rounded-2xl bg-emerald-950/50 border border-emerald-500/40 text-slate-100 space-y-4 animate-fade-in shadow-xl">
-    <div class="flex items-center gap-2.5">
-        <div class="w-8 h-8 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold">
+<div th:if="${success}" class="p-6 rounded-3xl bg-slate-900/95 border border-emerald-500/40 text-slate-100 space-y-4 shadow-2xl relative overflow-hidden">
+    <div class="absolute -right-8 -top-8 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none"></div>
+
+    <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold text-lg shadow-sm">
             ✓
         </div>
         <div>
-            <h4 class="text-sm font-bold text-white">¡API Key generada con éxito!</h4>
-            <p class="text-xs text-emerald-300">
-                Cliente: <span class="font-semibold text-white" th:text="${creationResult.client().clientName()}">App</span> 
+            <h4 class="text-sm sm:text-base font-bold text-white tracking-tight">¡API Key generada con éxito!</h4>
+            <p class="text-xs text-slate-400 mt-0.5">
+                Cliente: <span class="font-semibold text-emerald-400" th:text="${creationResult.client().clientName()}">App</span> 
                 &bull; Cuota: <span class="font-semibold text-white">10 peticiones / minuto</span>
             </p>
         </div>
     </div>
 
     <div>
-        <label class="block text-[11px] font-medium text-slate-400 mb-1">Tu Clave de Acceso (Guárdala ahora):</label>
-        <div class="flex items-center gap-2 bg-slate-950 border border-slate-700 rounded-xl p-2.5 font-mono text-xs text-emerald-400">
+        <label class="block text-[11px] font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">Tu Clave de Acceso (Cópiala ahora):</label>
+        <div class="flex items-center gap-2 bg-slate-950 border border-slate-700/80 rounded-xl p-2.5 font-mono text-xs shadow-inner">
             <input type="text" readonly id="generatedApiKeyInput" th:value="${creationResult.plainApiKey()}"
-                   class="bg-transparent flex-1 select-all outline-none font-mono text-emerald-300 text-xs sm:text-sm">
-            <button type="button" onclick="navigator.clipboard.writeText(document.getElementById('generatedApiKeyInput').value); this.innerText='¡Copiado!';"
-                    class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs rounded-lg transition shrink-0">
+                   class="bg-transparent flex-1 select-all outline-none font-mono text-emerald-300 text-xs sm:text-sm font-semibold tracking-wide">
+            <button type="button" 
+                    onclick="navigator.clipboard.writeText(document.getElementById('generatedApiKeyInput').value); this.innerText='¡Copiado!'; setTimeout(() => this.innerText='Copiar', 2000);"
+                    class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-lg transition active:scale-95 shrink-0 shadow">
                 Copiar
             </button>
         </div>
     </div>
 
-    <div class="text-[11px] text-amber-300/90 bg-amber-950/40 border border-amber-900/60 rounded-lg p-2.5 flex items-start gap-2">
-        <span>🔒</span>
-        <span>Por motivos de seguridad, esta clave se almacena cifrada con SHA-256 en la base de datos y <strong>no volverá a mostrarse</strong>.</span>
+    <div class="text-[11px] text-amber-300/90 bg-amber-950/40 border border-amber-900/60 rounded-xl p-3 flex items-start gap-2.5 leading-relaxed">
+        <span class="text-amber-400 text-sm">🔒</span>
+        <span>Por motivos de seguridad y privacidad, esta clave se almacena cifrada con SHA-256 en SQLite y <strong>no volverá a mostrarse</strong>. Guárdala en tus variables de entorno.</span>
     </div>
 
     <div>
-        <label class="block text-[11px] font-medium text-slate-400 mb-1">Pruébala inmediatamente desde tu terminal:</label>
-        <div class="bg-slate-950 border border-slate-800 rounded-lg p-2.5 font-mono text-[11px] text-slate-300 overflow-x-auto">
-            <code>curl -H "X-API-Key: <span th:text="${creationResult.plainApiKey()}">bolivia_live_...</span>" <span class="base-url-text" th:text="${baseUrl}">http://155.181.158.36:8080</span>/api/v1/rates/latest</code>
+        <label class="block text-[11px] font-semibold text-slate-400 mb-1.5">Pruébala inmediatamente desde tu terminal:</label>
+        <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 font-mono text-[11px] text-slate-300 overflow-x-auto shadow-inner flex items-center justify-between gap-3">
+            <code class="truncate">curl -H "X-API-Key: <span th:text="${creationResult.plainApiKey()}">bolivia_live_...</span>" <span class="base-url-text" th:text="${baseUrl}">http://155.181.158.36:8080</span>/api/v1/rates/latest</code>
+            <button type="button" 
+                    th:data-curl="'curl -H &quot;X-API-Key: ' + ${creationResult.plainApiKey()} + '&quot; ' + ${baseUrl} + '/api/v1/rates/latest'"
+                    onclick="navigator.clipboard.writeText(this.getAttribute('data-curl')); this.innerText='¡Copiado!'; setTimeout(() => this.innerText='Copiar', 2000);"
+                    class="text-[10px] text-slate-400 hover:text-white px-2 py-1 rounded bg-slate-900 border border-slate-800 shrink-0 transition">
+                Copiar
+            </button>
         </div>
     </div>
 
@@ -48,8 +57,9 @@
         <button type="button"
                 th:data-key="${creationResult.plainApiKey()}"
                 onclick="loadKeyIntoPlayground(this.getAttribute('data-key'))"
-                class="text-xs text-blue-400 hover:text-blue-300 underline font-medium inline-flex items-center gap-1">
-            <span>Cargar en el Playground en vivo ↓</span>
+                class="px-4 py-2 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/20 text-xs text-sky-400 font-semibold transition active:scale-95 inline-flex items-center gap-1.5">
+            <span>⚡</span>
+            <span>Cargar clave en el Playground en vivo ↓</span>
         </button>
     </div>
 </div>
