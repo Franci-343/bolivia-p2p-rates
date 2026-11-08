@@ -12,23 +12,15 @@ ExecStart=/home/ubuntu/bolivia-p2p-rates/jre/bin/java -Xms64m -Xmx256m -XX:MaxMe
 Restart=always
 RestartSec=5
 
-# Environment Configuration
+# Environment Configuration (default values; can be customized or configured via rates.properties)
 Environment=PORT=8080
 Environment=POLL_INTERVAL_SECONDS=600
 Environment=SQLITE_DB_PATH=database/rates.db
 Environment=FIAT_CURRENCY=BOB
 Environment=ASSET_CURRENCY=USDT
 
-# Oracle Autonomous Database Sync Configuration (Always Free, Max 1 connection, 0 at rest)
-Environment=ORACLE_SYNC_ENABLED=false
-Environment=ORACLE_JDBC_URL=jdbc:oracle:thin:@francodb_low
-Environment=ORACLE_DB_USER=BOLIVIA_P2P
-Environment=ORACLE_DB_PASSWORD=
-Environment=ORACLE_TNS_ADMIN=/home/ubuntu/.config/oracle_db/Wallet_FRANCODB
-Environment=ORACLE_POOL_MAX_SIZE=1
-Environment=ORACLE_SYNC_INTERVAL_SECONDS=60
-Environment=ORACLE_SYNC_BATCH_SIZE=25
-Environment=SQLITE_RECENT_SNAPSHOTS=100
+# Oracle Autonomous Database sync is configured in /home/ubuntu/bolivia-p2p-rates/rates.properties
+# keeping credentials secure outside systemd service unit files.
 
 # Hard memory protection for 1GB RAM VM
 MemoryMax=450M

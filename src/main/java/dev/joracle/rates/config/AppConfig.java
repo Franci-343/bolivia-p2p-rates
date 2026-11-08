@@ -209,22 +209,22 @@ public record AppConfig(
             if (val != null && !val.isBlank()) return val.trim();
         }
 
-        // 2. Environment variable
-        val = System.getenv(envKey);
-        if (val != null && !val.isBlank()) return val.trim();
-        if (dottedKey != null) {
-            String altEnv = dottedKey.replace('.', '_').toUpperCase();
-            val = System.getenv(altEnv);
-            if (val != null && !val.isBlank()) return val.trim();
-        }
-
-        // 3. Properties object (file)
+        // 2. Properties object (e.g. rates.properties configuration file) takes priority over OS environment
         if (props != null) {
             if (dottedKey != null) {
                 val = props.getProperty(dottedKey);
                 if (val != null && !val.isBlank()) return val.trim();
             }
             val = props.getProperty(envKey);
+            if (val != null && !val.isBlank()) return val.trim();
+        }
+
+        // 3. Environment variable (OS env or systemd)
+        val = System.getenv(envKey);
+        if (val != null && !val.isBlank()) return val.trim();
+        if (dottedKey != null) {
+            String altEnv = dottedKey.replace('.', '_').toUpperCase();
+            val = System.getenv(altEnv);
             if (val != null && !val.isBlank()) return val.trim();
         }
 
