@@ -30,6 +30,7 @@ import io.javalin.rendering.template.JavalinThymeleaf;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
@@ -51,6 +52,23 @@ public class App {
 
         // 2. Database Persistence & Migrations
         DatabaseManager databaseManager = new DatabaseManager(config.databasePath());
+
+        // Create an automatic safety backup before running migrations on pre-existing database
+        Path dbPath = Path.of(config.databasePath());
+        if (Files.exists(dbPath)) {
+            try {
+                Path backupDir = dbPath.getParent() != null ? dbPath.getParent().resolve("backups") : Path.of("database", "backups");
+                Files.createDirectories(backupDir);
+                Path backupFile = backupDir.resolve("rates_backup_pre_migration.db");
+                if (!Files.exists(backupFile)) {
+                    databaseManager.createBackup(backupFile);
+                    log.info("Automatic safety backup created before migrations at: {}", backupFile.toAbsolutePath());
+                }
+            } catch (Exception e) {
+                log.warn("Automatic safety backup could not be completed (proceeding with migration): {}", e.getMessage());
+            }
+        }
+
         DatabaseMigrator migrator = new DatabaseMigrator(databaseManager, Path.of("database"));
         migrator.migrate();
 
