@@ -3,8 +3,10 @@ package dev.joracle.rates.api;
 import dev.joracle.rates.client.BinanceApiException;
 import dev.joracle.rates.model.ApiClient;
 import dev.joracle.rates.model.RateSnapshot;
+import dev.joracle.rates.repository.OutboxRepository;
 import dev.joracle.rates.repository.RateRepository;
 import dev.joracle.rates.service.ApiKeyService;
+import dev.joracle.rates.service.OracleSyncWorker;
 import dev.joracle.rates.service.RatePollerService;
 import io.javalin.config.RoutesConfig;
 import io.javalin.http.Context;
@@ -12,6 +14,7 @@ import io.javalin.http.HttpStatus;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -21,18 +24,27 @@ import java.util.Objects;
  * <p>
  * Core Architecture Rule:
  * All consumer requests read strictly from {@link RateRepository} (In-Memory buffer / SQLite DB).
- * Zero requests are forwarded to Binance when clients query this API.
+ * Zero requests are forwarded to Binance or Oracle when clients query this API.
  */
 public class RateController {
 
     private final RateRepository rateRepository;
     private final RatePollerService pollerService;
     private final ApiKeyService apiKeyService;
+    private final OracleSyncWorker syncWorker;
+    private final OutboxRepository outboxRepository;
 
     public RateController(RateRepository rateRepository, RatePollerService pollerService, ApiKeyService apiKeyService) {
+        this(rateRepository, pollerService, apiKeyService, null, null);
+    }
+
+    public RateController(RateRepository rateRepository, RatePollerService pollerService, ApiKeyService apiKeyService,
+                          OracleSyncWorker syncWorker, OutboxRepository outboxRepository) {
         this.rateRepository = Objects.requireNonNull(rateRepository, "rateRepository cannot be null");
-        this.pollerService = Objects.requireNonNull(pollerService, "pollerService cannot be null");
+        this.pollerService = pollerService;
         this.apiKeyService = Objects.requireNonNull(apiKeyService, "apiKeyService cannot be null");
+        this.syncWorker = syncWorker;
+        this.outboxRepository = outboxRepository;
     }
 
     /**
@@ -111,24 +123,42 @@ public class RateController {
     }
 
     private void getStatus(Context ctx) {
+        Map<String, Object> resp = new LinkedHashMap<>();
+
         rateRepository.findLatest().ifPresentOrElse(
                 latest -> {
                     long ageSeconds = Duration.between(latest.timestamp(), Instant.now()).getSeconds();
-                    ctx.status(HttpStatus.OK).json(Map.of(
-                            "status", "UP",
-                            "cycleId", latest.cycleId(),
-                            "lastCycleStatus", latest.status(),
-                            "isStale", latest.stale(),
-                            "dataAgeSeconds", ageSeconds,
-                            "lastCycleDurationMs", latest.durationMs(),
-                            "capturedAt", latest.timestamp().toString()
-                    ));
+                    resp.put("status", "UP");
+                    resp.put("cycleId", latest.cycleId());
+                    resp.put("lastCycleStatus", latest.status());
+                    resp.put("isStale", latest.stale());
+                    resp.put("dataAgeSeconds", ageSeconds);
+                    resp.put("lastCycleDurationMs", latest.durationMs());
+                    resp.put("capturedAt", latest.timestamp().toString());
                 },
-                () -> ctx.status(HttpStatus.OK).json(Map.of(
-                        "status", "INITIALIZING",
-                        "message", "Awaiting first scheduled collection cycle"
-                ))
+                () -> {
+                    resp.put("status", "INITIALIZING");
+                    resp.put("message", "Awaiting first scheduled collection cycle");
+                }
         );
+
+        if (syncWorker != null && outboxRepository != null) {
+            long pendingCount = outboxRepository.countPendingEvents();
+            String oracleStatus = "SYNCED";
+            if (syncWorker.getLastError() != null && syncWorker.getConsecutiveFailures() > 0) {
+                oracleStatus = "ERROR";
+            } else if (pendingCount > 0) {
+                oracleStatus = "PENDING";
+            }
+
+            resp.put("oracleSyncStatus", oracleStatus);
+            resp.put("oraclePendingEvents", pendingCount);
+            resp.put("oracleSyncLagSeconds", syncWorker.getLagSeconds());
+            resp.put("oracleLastSuccess", syncWorker.getLastSuccessInstant() != null ? syncWorker.getLastSuccessInstant().toString() : null);
+            resp.put("oracleTotalEventsSynced", syncWorker.getTotalEventsSynced());
+        }
+
+        ctx.status(HttpStatus.OK).json(resp);
     }
 
     private void getLatestRates(Context ctx) {
@@ -174,6 +204,14 @@ public class RateController {
                     "error", "Forbidden",
                     "message", "Se requieren privilegios de ADMIN para forzar refresco manual.",
                     "timestamp", Instant.now().toString()
+            ));
+            return;
+        }
+
+        if (pollerService == null) {
+            ctx.status(HttpStatus.SERVICE_UNAVAILABLE).json(Map.of(
+                    "error", "Service Unavailable",
+                    "message", "Rate poller service is not initialized."
             ));
             return;
         }

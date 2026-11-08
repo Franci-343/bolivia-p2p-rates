@@ -6,16 +6,18 @@ El sistema fue proyectado bajo una arquitectura austera de alta eficiencia y ult
 
 ---
 
-## Regla de Oro de Arquitectura
+## Reglas de Oro de Arquitectura
 
-> Binance P2P es consultado exclusivamente por el componente recolector programado en segundo plano (RatePollerService).
-> Ninguna peticion de clientes, bots o desarrolladores web genera llamadas directas hacia Binance. Todas las consultas de la API y del portal se resuelven de forma instantanea desde la memoria cache y la base de datos local SQLite.
+> 1. **Binance P2P es consultado exclusivamente por el componente recolector programado en segundo plano (`RatePollerService`).** Ninguna petición de clientes, bots o desarrolladores web genera llamadas directas hacia Binance.
+> 2. **Aislamiento Absoluto de Oracle:** Ninguna petición HTTP de clientes o administradores toca jamás la base de datos remota Oracle. Todas las consultas de la API REST (`/api/v1/rates/*`) y del portal web se resuelven de forma instantánea desde la memoria RAM (Caché L1) o desde la base local SQLite.
+> 3. **Presupuesto Estricto de Conexiones Oracle:** El bot opera con un máximo de 1 conexión física JDBC (`maximumPoolSize=1`) y 0 conexiones en reposo (`minimumIdle=0`, `idleTimeout=60s`), reservando al menos 29 de las 30 sesiones de Oracle Autonomous Database (Always Free) para otros proyectos del usuario.
+> 4. **Retención Local Segura:** SQLite actúa como buffer operacional y nunca se vacía por completo tras sincronizar con Oracle. Se retienen permanentemente al menos los últimos 100 snapshots para servir historiales de latencia ultrabaja (`/api/v1/rates/history?limit=100`) sin depender de la red externa.
 
 ---
 
-## Arquitectura del Sistema
+## Arquitectura del Sistema (Híbrida SQLite + Oracle Autonomous)
 
-El diseno desacopla el ciclo de obtencion de datos respecto a la atencion de trafico de red, eliminando el riesgo de saturacion externa o bloqueos de IP por exceso de peticiones.
+El diseño desacopla el ciclo de recolección de mercado, la atención de tráfico HTTP de alta concurrencia y la sincronización asíncrona hacia el data warehouse en Oracle Cloud mediante el patrón **Transactional Outbox**.
 
 ```mermaid
 flowchart TD
@@ -23,17 +25,24 @@ flowchart TD
         BinanceAPI["Binance P2P API (c2c friendly search)"]
     end
 
-    subgraph BotWorker ["Worker en Segundo Plano (Poller)"]
+    subgraph BotWorker ["Worker Recolector (Poller)"]
         RatePollerService["RatePollerService (ScheduledExecutorService)"]
         BinanceP2PClient["BinanceP2PClient (Java 25 HttpClient)"]
         RateAnalysisService["RateAnalysisService (Mediana, Promedio, Filtros)"]
     end
 
-    subgraph CapaPersistencia ["Capa de Persistencia y Cache"]
+    subgraph CapaPersistenciaLocal ["Persistencia Local y Outbox (SQLite WAL)"]
         SqliteRateRepository["SqliteRateRepository"]
         CacheMemoria["AtomicReference (Cache L1 en Memoria)"]
         SqliteDB[("SQLite WAL (database/rates.db)")]
+        OutboxTable[("sync_outbox (Transactional Outbox)")]
         ApiClientRepository["SqliteApiClientRepository"]
+    end
+
+    subgraph SincronizacionOracle ["Worker Asíncrono de Sincronización Oracle"]
+        OracleSyncWorker["OracleSyncWorker (Lotes asíncronos + Backoff)"]
+        OraclePool["HikariCP Pool (Max: 1, Min: 0, Idle: 60s)"]
+        OracleDB[("Oracle Autonomous Database (Always Free)")]
     end
 
     subgraph CapaSeguridad ["Seguridad, Sesiones y Rate Limiting"]
@@ -48,24 +57,31 @@ flowchart TD
     end
 
     subgraph Clientes ["Consumidores"]
-        AppsBots["Bots de Telegram, Apps Moviles y Servidores"]
+        AppsBots["Bots de Telegram, Apps Móviles y Servidores"]
         DesarrolladoresWeb["Desarrolladores Web y Navegadores"]
         AdminUser["Administrador del Sistema"]
     end
 
     %% Recoleccion programada
     RatePollerService -->|"1. Intervalo programado (ej. 600s)"| BinanceP2PClient
-    BinanceP2PClient -->|"2. Peticion HTTP POST asincrona"| BinanceAPI
+    BinanceP2PClient -->|"2. Petición HTTP POST asíncrona"| BinanceAPI
     BinanceAPI -->|"3. Retorna ofertas brutas BUY y SELL"| BinanceP2PClient
     BinanceP2PClient -->|"4. Mapeo a P2POffer DTOs"| RatePollerService
     RatePollerService -->|"5. Filtra, valida y calcula indicadores"| RateAnalysisService
     RateAnalysisService -->|"6. Retorna RateSnapshot consolidado"| RatePollerService
     RatePollerService -->|"7. Persiste snapshot"| SqliteRateRepository
-    SqliteRateRepository -->|"8a. Actualiza cache atomica en memoria"| CacheMemoria
-    SqliteRateRepository -->|"8b. Escritura transaccional en disco"| SqliteDB
+    SqliteRateRepository -->|"8a. Actualiza caché atómica en memoria"| CacheMemoria
+    SqliteRateRepository -->|"8b. Transacción atómica: Snapshot + Outbox Event"| SqliteDB
+    SqliteDB --- OutboxTable
 
-    %% Consumo API REST
-    AppsBots -->|"Peticiones GET/POST con X-API-Key"| RateController
+    %% Sincronizacion Outbox -> Oracle
+    OracleSyncWorker -->|"9a. Lee lote de eventos pendientes"| OutboxTable
+    OracleSyncWorker -->|"9b. Conexión bajo demanda (0-1)"| OraclePool
+    OraclePool -->|"9c. Batch INSERT idempotente (PROCESSED_EVENTS)"| OracleDB
+    OracleSyncWorker -->|"9d. Purga eventos SENT y retiene 100 snapshots"| SqliteDB
+
+    %% Consumo API REST (100% aislado de Oracle)
+    AppsBots -->|"Peticiones GET con X-API-Key"| RateController
     RateController -->|"Valida llave y cuota RPM"| ApiKeyService
     ApiKeyService -->|"Verifica hash SHA-256"| ApiClientRepository
     ApiClientRepository -->|"Lectura de cliente"| SqliteDB
@@ -73,14 +89,15 @@ flowchart TD
     RateController -.->|"Consultas de historial paginado"| SqliteDB
 
     %% Portal Publico y Wiki
-    DesarrolladoresWeb -->|"Navegacion, consultas y generacion de llaves"| PortalController
+    DesarrolladoresWeb -->|"Navegación, consultas y generación de llaves"| PortalController
     PortalController -->|"Lee tasas actuales para UI"| CacheMemoria
     PortalController -->|"Genera credenciales seguras"| ApiKeyService
 
     %% Panel Administrativo
-    AdminUser -->|"Gestion y refresco manual forzado"| AdminController
-    AdminController -->|"Control de sesion HTTP-only y CSRF"| AdminSessionService
+    AdminUser -->|"Gestión, telemetría y sincronización manual"| AdminController
+    AdminController -->|"Control de sesión HTTP-only y CSRF"| AdminSessionService
     AdminController -->|"Dispara refresco con cooldown (60s)"| RatePollerService
+    AdminController -->|"Dispara sync manual a Oracle"| OracleSyncWorker
 ```
 
 ### Componentes Principales
@@ -148,7 +165,28 @@ erDiagram
         TEXT created_at
     }
 
+    SYNC_OUTBOX {
+        INTEGER seq_id PK
+        TEXT event_id UK
+        TEXT aggregate_type
+        TEXT aggregate_id
+        TEXT event_type
+        TEXT payload_json
+        TEXT status
+        INTEGER attempts
+        TEXT last_error
+        TEXT created_at
+        TEXT synced_at
+    }
+
+    SYNC_METADATA {
+        TEXT meta_key PK
+        TEXT meta_value
+        TEXT updated_at
+    }
+
     API_CLIENTS ||--o{ RATE_SNAPSHOTS : "autoriza_acceso_a"
+    RATE_SNAPSHOTS ||--o{ SYNC_OUTBOX : "encola_evento_en"
 ```
 
 ### Explicacion de Tablas y Estrategia de Persistencia
@@ -191,6 +229,32 @@ Gobierna la autorizacion de consumo para desarrolladores y administradores:
 * `created_at` (TEXT): Timestamp UTC de registro del cliente.
 * **Indices de Rendimiento:**
   * `idx_api_clients_hash`: Indice B-Tree para autenticacion en tiempo O(1) sobre el hash recibido.
+
+#### 4. Tabla `sync_outbox` (Transactional Outbox Local)
+Buffer local para la sincronizacion asincrona hacia Oracle Autonomous Database:
+* `seq_id` (INTEGER, PK): Secuencia incremental estricta para garantizar procesamiento en orden y replay determinista.
+* `event_id` (TEXT, UNIQUE): Identificador global unico estable entre reintentos (`<source_instance_id>:<event_type>:<aggregate_id>:<local_id>`).
+* `aggregate_type` / `aggregate_id`: Tipo y clave de la entidad (`RATE_SNAPSHOT`, `API_CLIENT`).
+* `event_type`: Operacion (`RATE_SNAPSHOT`, `API_CLIENT_UPSERT`, `API_CLIENT_DELETE`).
+* `payload_json` (TEXT): Payload JSON completo del registro.
+* `status` (TEXT): Estado del evento (`PENDING`, `FAILED`, `SENT`).
+* `attempts` (INTEGER): Contador de reintentos ejecutados.
+* `last_error` (TEXT): Ultimo mensaje de error capturado ante caidas de conectividad.
+* `created_at` / `synced_at` (TEXT): Marcas temporales UTC ISO-8601 (`%Y-%m-%dT%H:%M:%fZ`).
+
+#### 5. Tabla `sync_metadata` (Control de Estado Local)
+Almacena metadatos del motor de sincronizacion:
+* `source_instance_id`: Identificador unico persistente de la instancia local del bot (evita colisiones cruzadas).
+* `schema_version`: Version del esquema del outbox local.
+
+---
+
+### Esquema Remoto en Oracle Autonomous Database (`BOLIVIA_P2P`)
+
+En Oracle Autonomous Always Free se replican los datos historicos a largo plazo bajo un usuario aislado con cuotas seguras:
+* **`PROCESSED_EVENTS`:** Tabla de idempotencia remota (`EVENT_ID VARCHAR2(120) PRIMARY KEY`). Evita inserciones duplicadas cuando ocurren caidas de red o cortes tras el `COMMIT` remoto antes del `ACK` local.
+* **`RATE_SNAPSHOTS`:** Tabla historica de cotizaciones con precision matematica exacta mediante `NUMBER(24, 8)` para los campos de cotizaciones `BigDecimal`. Incluye restriccion unica `(SOURCE_INSTANCE_ID, LOCAL_SNAPSHOT_ID)`.
+* **`API_CLIENTS`:** Replicacion de clientes autorizados (`CLIENT_ID VARCHAR2(64) UNIQUE`) para auditoria remota y control centralizado.
 
 ### Optimizaciones del Motor SQLite
 
@@ -301,9 +365,20 @@ El proyecto implementa tecnicas de optimizacion en multiples capas para garantiz
 
 * **Thymeleaf + HTMX:** Todo el portal de desarrolladores y el panel de administracion se construyen mediante renderizado del lado del servidor (SSR) y fragmentos dinamicos impulsados por HTMX. Esto prescinde completamente de frameworks SPA pesados (como React, Angular o Vue), reduciendo a cero el empaquetado de JavaScript externo y garantizando tiempos de carga casi instantaneos.
 
+### 6. Optimizacion de Conexiones Oracle y Transactional Outbox
+
+* **Pool HikariCP Austero (0-1 Conexiones):** Configurado con `maximumPoolSize=1`, `minimumIdle=0`, `idleTimeout=60000` y `initializationFailTimeout=-1`. El bot solo toma una conexion fisica cuando tiene lotes pendientes por sincronizar y la devuelve al pool inmediatamente tras el commit; tras 60 segundos de inactividad, la conexion se cierra por completo, liberando la sesion en Oracle Autonomous Always Free para otros proyectos.
+* **Resiliencia ante Caidas de Oracle:** Si la base de datos remota no responde o hay problemas de red, los eventos se acumulan de forma segura en `sync_outbox` de SQLite con estado `FAILED` y contador de intentos. El servicio web y el bot continuan operando normalmente al 100%. Al restablecerse la conexion, el worker reanuda la sincronizacion sin duplicados ni perdidas.
+* **Politica de Limpieza Dual Segura:**
+  * **Outbox Confirmado:** Los eventos con estado `SENT` se eliminan de `sync_outbox` tras confirmarse el commit en Oracle y el ACK local, evitando el crecimiento indefinido del JSON en disco.
+  * **Retencion Minima Local (100 Snapshots):** Los snapshots locales solo se eliminan si ya fueron sincronizados exitosamente a Oracle (`synced_at IS NOT NULL`) y si su identificador de ciclo no pertenece a los 100 snapshots mas recientes (`SQLITE_RECENT_SNAPSHOTS=100`). De esta forma, `/api/v1/rates/history` siempre responde al instante desde disco local.
+* **Idempotencia Cero-Duplicados:** Cada lote inserta primero los identificadores en `PROCESSED_EVENTS` de Oracle. Reintentos tras caidas de red intermedias son absorbidos sin generar duplicados.
+
 ---
 
 ## Variables de Entorno (Configuracion)
+
+### Configuracion General del Servicio
 
 | Variable | Valor por Defecto | Descripcion |
 | :--- | :--- | :--- |
@@ -316,6 +391,20 @@ El proyecto implementa tecnicas de optimizacion en multiples capas para garantiz
 | `SQLITE_DB_PATH` | `database/rates.db` | Ruta del archivo de base de datos SQLite embebida. |
 | `PUBLIC_BASE_PATH` | *(vacio)* | Prefijo de ruta base publica en despliegues tras proxy inverso (ej. `/bolivia-rates`). |
 | `ADMIN_API_KEY` | *(opcional)* | Clave maestra opcional inyectada para inicializar o sincronizar la cuenta administrativa. |
+
+### Sincronizacion con Oracle Autonomous Database (Opcional / Always Free)
+
+| Variable | Valor por Defecto | Descripcion |
+| :--- | :--- | :--- |
+| `ORACLE_SYNC_ENABLED` | `false` | Habilita el worker asincrono de sincronizacion hacia Oracle Autonomous. |
+| `ORACLE_JDBC_URL` | `jdbc:oracle:thin:@francodb_low` | Cadena JDBC de conexion hacia el servicio TNS de Oracle Autonomous Database. |
+| `ORACLE_DB_USER` | `BOLIVIA_P2P` | Usuario dedicado en el esquema Oracle con cuota restringida. |
+| `ORACLE_DB_PASSWORD` | *(vacio)* | Contrasena del usuario Oracle. |
+| `ORACLE_TNS_ADMIN` | *(vacio)* | Ruta al directorio con la Wallet de Oracle descomprimida (`cwallet.sso`, `tnsnames.ora`). |
+| `ORACLE_POOL_MAX_SIZE` | `1` | Maximo de conexiones fisicas JDBC simultaneas hacia Oracle (por defecto 1). |
+| `ORACLE_SYNC_INTERVAL_SECONDS` | `60` | Frecuencia de ejecucion del worker de sincronizacion en segundo plano. |
+| `ORACLE_SYNC_BATCH_SIZE` | `25` | Tamano maximo de eventos sincronizados por cada lote atomico. |
+| `SQLITE_RECENT_SNAPSHOTS` | `100` | Cantidad minima de snapshots retenidos permanentemente en SQLite local tras purga. |
 
 ---
 

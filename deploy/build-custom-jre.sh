@@ -19,15 +19,35 @@ TARGET_JRE="${APP_DIR}/jre"
 echo "=== [jlink] Custom JRE Builder for Bolivia P2P Rates ==="
 echo "Directorio de la aplicación: ${APP_DIR}"
 
-# 1. Idempotencia: Si ya existe un JRE funcional, omitir reconstrucción
-if [ -x "${TARGET_JRE}/bin/java" ] && "${TARGET_JRE}/bin/java" -version > /dev/null 2>&1 && [ "${1:-}" != "--force" ]; then
-    echo "Custom JRE funcional ya existe en: ${TARGET_JRE}"
+# 1. Definir módulos requeridos (HTTP, SQL, Logging, XML, Security, SASL, Crypto, Unsafe)
+MODULES="java.base,java.desktop,java.instrument,java.logging,java.management,java.naming,java.net.http,java.rmi,java.security.jgss,java.security.sasl,java.sql,java.xml,jdk.crypto.cryptoki,jdk.security.auth,jdk.unsupported"
+
+# 2. Idempotencia: Si ya existe un JRE funcional y contiene todos los módulos requeridos, omitir reconstrucción
+REBUILD_NEEDED=0
+if [ "${1:-}" = "--force" ]; then
+    REBUILD_NEEDED=1
+elif [ ! -x "${TARGET_JRE}/bin/java" ] || ! "${TARGET_JRE}/bin/java" -version > /dev/null 2>&1; then
+    REBUILD_NEEDED=1
+else
+    IFS=',' read -ra MOD_ARRAY <<< "${MODULES}"
+    EXISTING_MODS=$("${TARGET_JRE}/bin/java" --list-modules 2>/dev/null | cut -d'@' -f1)
+    for mod in "${MOD_ARRAY[@]}"; do
+        if ! echo "${EXISTING_MODS}" | grep -qx "${mod}"; then
+            echo "Módulo faltante en JRE actual: ${mod}. Se regenerará el Custom JRE."
+            REBUILD_NEEDED=1
+            break
+        fi
+    done
+fi
+
+if [ "${REBUILD_NEEDED}" -eq 0 ]; then
+    echo "Custom JRE funcional y completo ya existe en: ${TARGET_JRE}"
     "${TARGET_JRE}/bin/java" -version 2>&1 | head -n 2
     echo "Saltando compilación (usa --force para regenerar)."
     exit 0
 fi
 
-# 2. Localizar binarios jlink y java de JDK 25
+# 3. Localizar binarios jlink y java de JDK 25
 JLINK_BIN=""
 JAVA_SRC_BIN=""
 
@@ -51,9 +71,6 @@ if [ -z "${JLINK_BIN}" ] || [ ! -x "${JLINK_BIN}" ]; then
 fi
 
 echo "Usando jlink: ${JLINK_BIN}"
-
-# 3. Definir módulos requeridos (HTTP, SQL, Logging, XML, Security, Unsafe)
-MODULES="java.base,java.desktop,java.instrument,java.logging,java.management,java.naming,java.net.http,java.rmi,java.security.jgss,java.sql,java.xml,jdk.unsupported"
 
 # 4. Manejo seguro de stripping (evita el error 'objcopy' not found en Ubuntu minimal)
 STRIP_OPTS=()

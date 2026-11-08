@@ -11,6 +11,7 @@ import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Objects;
 import java.util.Properties;
 
@@ -61,6 +62,31 @@ public class DatabaseManager implements AutoCloseable {
 
     public String getJdbcUrl() {
         return jdbcUrl;
+    }
+
+    /**
+     * Creates a consistent, defragmented backup of the SQLite database.
+     * Flushes WAL pages via PRAGMA wal_checkpoint(TRUNCATE) before performing VACUUM INTO.
+     */
+    public void createBackup(Path targetFile) throws SQLException {
+        Objects.requireNonNull(targetFile, "targetFile cannot be null");
+        Path targetPath = targetFile.toAbsolutePath().normalize();
+        File parent = targetPath.getParent() != null ? targetPath.getParent().toFile() : null;
+        if (parent != null && !parent.exists()) {
+            parent.mkdirs();
+        }
+        try {
+            Files.deleteIfExists(targetPath);
+        } catch (IOException e) {
+            log.warn("Could not delete existing backup file {}: {}", targetPath, e.getMessage());
+        }
+
+        try (Connection conn = getConnection();
+             Statement stmt = conn.createStatement()) {
+            stmt.execute("PRAGMA wal_checkpoint(TRUNCATE)");
+            stmt.execute("VACUUM INTO '" + targetPath.toString().replace('\\', '/') + "'");
+            log.info("Consistent SQLite backup created successfully at: {}", targetPath);
+        }
     }
 
     @Override

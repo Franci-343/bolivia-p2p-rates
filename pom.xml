@@ -71,6 +71,25 @@
       <version>3.48.0.0</version>
     </dependency>
 
+    <!-- Oracle JDBC Driver for Java 17/21/25 & Wallet/mTLS Security -->
+    <dependency>
+      <groupId>com.oracle.database.jdbc</groupId>
+      <artifactId>ojdbc17</artifactId>
+      <version>23.6.0.24.10</version>
+    </dependency>
+    <dependency>
+      <groupId>com.oracle.database.security</groupId>
+      <artifactId>oraclepki</artifactId>
+      <version>23.6.0.24.10</version>
+    </dependency>
+
+    <!-- HikariCP: Connection Pool (enforces max 1, min 0 for Oracle) -->
+    <dependency>
+      <groupId>com.zaxxer</groupId>
+      <artifactId>HikariCP</artifactId>
+      <version>6.2.0</version>
+    </dependency>
+
     <!-- Testing -->
     <dependency>
       <groupId>org.junit.jupiter</groupId>

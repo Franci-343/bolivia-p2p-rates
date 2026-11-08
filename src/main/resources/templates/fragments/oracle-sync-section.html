@@ -1,0 +1,86 @@
+<!-- Oracle Cloud Autonomous Database Sync Section Fragment -->
+<div id="oracle-sync-container" class="bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-3xl p-5 sm:p-7 shadow-xl">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <div>
+            <div class="flex items-center gap-2.5">
+                <span class="text-xl">🏛️</span>
+                <h2 class="text-base sm:text-lg font-bold text-white tracking-tight">Réplica Histórica en Oracle Cloud</h2>
+                <!-- Status Badge -->
+                <span th:if="${oracleSyncStatus == 'SYNCED'}"
+                      class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-950 border border-emerald-700 text-emerald-400">
+                    Sincronizado
+                </span>
+                <span th:if="${oracleSyncStatus == 'PENDING'}"
+                      class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-950 border border-amber-700 text-amber-400">
+                    Pendientes en Cola
+                </span>
+                <span th:if="${oracleSyncStatus == 'ERROR'}"
+                      class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-950 border border-rose-700 text-rose-400">
+                    Error de Conexión
+                </span>
+                <span th:if="${oracleSyncStatus == 'DISABLED'}"
+                      class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-800 border border-slate-700 text-slate-400">
+                    Desactivado
+                </span>
+            </div>
+            <p class="text-xs text-slate-400 mt-1">
+                Sincronización asíncrona hacia Autonomous DB Always Free (Máx. 1 conexión física, 0 en reposo).
+            </p>
+        </div>
+
+        <!-- Manual Sync Button -->
+        <button th:if="${oracleEnabled}"
+                th:attr="hx-post=${(publicBasePath != null ? publicBasePath : '') + '/admin/oracle-sync'}"
+                hx-target="#oracle-sync-container"
+                hx-swap="outerHTML"
+                class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl text-xs flex items-center gap-1.5 transition active:scale-95 shadow">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+            </svg>
+            <span>Sincronizar Lote Ahora</span>
+        </button>
+    </div>
+
+    <!-- Alert Message -->
+    <div th:if="${oracleSyncMessage != null}"
+         class="mb-4 p-3 rounded-xl bg-indigo-950/60 border border-indigo-800 text-indigo-300 text-xs font-medium flex items-center gap-2">
+        <svg class="w-4 h-4 text-indigo-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <span th:text="${oracleSyncMessage}">Mensaje de sincronización</span>
+    </div>
+
+    <!-- Error Alert if failed -->
+    <div th:if="${oracleLastError != null}"
+         class="mb-4 p-3 rounded-xl bg-rose-950/60 border border-rose-800 text-rose-300 text-xs font-medium flex items-center gap-2">
+        <svg class="w-4 h-4 text-rose-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+        <span>Último error: <span th:text="${oracleLastError}">Error</span></span>
+    </div>
+
+    <!-- Telemetry Cards Grid -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+        <div class="bg-slate-950/60 border border-slate-800/80 p-3.5 rounded-xl">
+            <span class="text-[10px] sm:text-xs font-medium text-slate-400 block mb-1">Eventos en Outbox</span>
+            <span class="text-base sm:text-xl font-extrabold text-white" th:text="${oraclePendingEvents}">0</span>
+            <span class="text-[10px] text-slate-500 block mt-0.5">Pendientes de réplica</span>
+        </div>
+
+        <div class="bg-slate-950/60 border border-slate-800/80 p-3.5 rounded-xl">
+            <span class="text-[10px] sm:text-xs font-medium text-slate-400 block mb-1">Conexiones HikariCP</span>
+            <span class="text-base sm:text-xl font-extrabold text-white">
+                <span th:text="${oracleActiveConnections}">0</span> / 1
+            </span>
+            <span class="text-[10px] text-emerald-400 block mt-0.5">0 en reposo</span>
+        </div>
+
+        <div class="bg-slate-950/60 border border-slate-800/80 p-3.5 rounded-xl">
+            <span class="text-[10px] sm:text-xs font-medium text-slate-400 block mb-1">Total Sincronizados</span>
+            <span class="text-base sm:text-xl font-extrabold text-white" th:text="${oracleTotalSynced}">0</span>
+            <span class="text-[10px] text-slate-500 block mt-0.5">Eventos confirmados</span>
+        </div>
+
+        <div class="bg-slate-950/60 border border-slate-800/80 p-3.5 rounded-xl">
+            <span class="text-[10px] sm:text-xs font-medium text-slate-400 block mb-1">Último Éxito</span>
+            <span class="text-[11px] sm:text-xs font-semibold text-slate-300 block truncate" th:text="${oracleLastSuccess}">Nunca</span>
+            <span class="text-[10px] text-slate-500 block mt-0.5">Confirmado por Oracle</span>
+        </div>
+    </div>
+</div>

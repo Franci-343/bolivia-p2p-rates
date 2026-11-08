@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.joracle.rates.db.DatabaseManager;
 import dev.joracle.rates.model.BankRateSummary;
 import dev.joracle.rates.model.MarketSummary;
+import dev.joracle.rates.model.OutboxEvent;
 import dev.joracle.rates.model.P2POffer;
 import dev.joracle.rates.model.RateSnapshot;
 import dev.joracle.rates.model.TradeType;
@@ -20,7 +21,9 @@ import java.sql.Statement;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
@@ -32,6 +35,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * for payment method breakdowns and offer lists.
  * Maintains an in-memory atomic reference to the latest snapshot to serve consumer REST
  * queries in sub-microseconds without hitting disk on every request.
+ * Concurrently enqueues events into {@link OutboxRepository} in the same atomic transaction.
  */
 public class SqliteRateRepository implements RateRepository {
 
@@ -39,11 +43,17 @@ public class SqliteRateRepository implements RateRepository {
 
     private final DatabaseManager databaseManager;
     private final ObjectMapper objectMapper;
+    private final OutboxRepository outboxRepository;
     private final AtomicReference<RateSnapshot> cachedLatest = new AtomicReference<>();
 
     public SqliteRateRepository(DatabaseManager databaseManager, ObjectMapper objectMapper) {
+        this(databaseManager, objectMapper, new SqliteOutboxRepository(databaseManager));
+    }
+
+    public SqliteRateRepository(DatabaseManager databaseManager, ObjectMapper objectMapper, OutboxRepository outboxRepository) {
         this.databaseManager = Objects.requireNonNull(databaseManager, "databaseManager cannot be null");
         this.objectMapper = Objects.requireNonNull(objectMapper, "objectMapper cannot be null");
+        this.outboxRepository = Objects.requireNonNull(outboxRepository, "outboxRepository cannot be null");
         // Warm up cache with most recent record from SQLite if available
         findLatestFromDatabase().ifPresent(cachedLatest::set);
     }
@@ -68,52 +78,79 @@ public class SqliteRateRepository implements RateRepository {
                 )
                 """;
 
-        try (Connection conn = databaseManager.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(insertSql)) {
+        try (Connection conn = databaseManager.getConnection()) {
+            boolean autoCommit = conn.getAutoCommit();
+            try {
+                conn.setAutoCommit(false);
 
-            MarketSummary buy = snapshot.buyMarket();
-            MarketSummary sell = snapshot.sellMarket();
+                long localId = 0;
+                try (PreparedStatement pstmt = conn.prepareStatement(insertSql, Statement.RETURN_GENERATED_KEYS)) {
+                    MarketSummary buy = snapshot.buyMarket();
+                    MarketSummary sell = snapshot.sellMarket();
 
-            String buyDetailsJson = serializeDetails(buy.bankSummaries(), buy.topOffers());
-            String sellDetailsJson = serializeDetails(sell.bankSummaries(), sell.topOffers());
+                    String buyDetailsJson = serializeDetails(buy.bankSummaries(), buy.topOffers());
+                    String sellDetailsJson = serializeDetails(sell.bankSummaries(), sell.topOffers());
 
-            int idx = 1;
-            pstmt.setLong(idx++, snapshot.cycleId());
-            pstmt.setString(idx++, snapshot.timestamp().toString());
-            pstmt.setLong(idx++, snapshot.durationMs());
-            pstmt.setInt(idx++, snapshot.stale() ? 1 : 0);
-            pstmt.setString(idx++, snapshot.status());
-            pstmt.setString(idx++, buy.fiat());
-            pstmt.setString(idx++, buy.asset());
+                    int idx = 1;
+                    pstmt.setLong(idx++, snapshot.cycleId());
+                    pstmt.setString(idx++, snapshot.timestamp().toString());
+                    pstmt.setLong(idx++, snapshot.durationMs());
+                    pstmt.setInt(idx++, snapshot.stale() ? 1 : 0);
+                    pstmt.setString(idx++, snapshot.status());
+                    pstmt.setString(idx++, buy.fiat());
+                    pstmt.setString(idx++, buy.asset());
 
-            // Buy fields
-            pstmt.setString(idx++, buy.referencePrice().toPlainString());
-            pstmt.setString(idx++, buy.averagePrice().toPlainString());
-            pstmt.setString(idx++, buy.medianPrice().toPlainString());
-            pstmt.setString(idx++, buy.minPrice().toPlainString());
-            pstmt.setString(idx++, buy.maxPrice().toPlainString());
-            pstmt.setInt(idx++, buy.validCount());
-            pstmt.setInt(idx++, buy.discardedCount());
-            pstmt.setInt(idx++, buy.totalReceived());
-            pstmt.setString(idx++, buyDetailsJson);
+                    // Buy fields
+                    pstmt.setString(idx++, buy.referencePrice().toPlainString());
+                    pstmt.setString(idx++, buy.averagePrice().toPlainString());
+                    pstmt.setString(idx++, buy.medianPrice().toPlainString());
+                    pstmt.setString(idx++, buy.minPrice().toPlainString());
+                    pstmt.setString(idx++, buy.maxPrice().toPlainString());
+                    pstmt.setInt(idx++, buy.validCount());
+                    pstmt.setInt(idx++, buy.discardedCount());
+                    pstmt.setInt(idx++, buy.totalReceived());
+                    pstmt.setString(idx++, buyDetailsJson);
 
-            // Sell fields
-            pstmt.setString(idx++, sell.referencePrice().toPlainString());
-            pstmt.setString(idx++, sell.averagePrice().toPlainString());
-            pstmt.setString(idx++, sell.medianPrice().toPlainString());
-            pstmt.setString(idx++, sell.minPrice().toPlainString());
-            pstmt.setString(idx++, sell.maxPrice().toPlainString());
-            pstmt.setInt(idx++, sell.validCount());
-            pstmt.setInt(idx++, sell.discardedCount());
-            pstmt.setInt(idx++, sell.totalReceived());
-            pstmt.setString(idx++, sellDetailsJson);
+                    // Sell fields
+                    pstmt.setString(idx++, sell.referencePrice().toPlainString());
+                    pstmt.setString(idx++, sell.averagePrice().toPlainString());
+                    pstmt.setString(idx++, sell.medianPrice().toPlainString());
+                    pstmt.setString(idx++, sell.minPrice().toPlainString());
+                    pstmt.setString(idx++, sell.maxPrice().toPlainString());
+                    pstmt.setInt(idx++, sell.validCount());
+                    pstmt.setInt(idx++, sell.discardedCount());
+                    pstmt.setInt(idx++, sell.totalReceived());
+                    pstmt.setString(idx++, sellDetailsJson);
 
-            pstmt.executeUpdate();
+                    pstmt.executeUpdate();
 
-            // Update in-memory atomic reference for instantaneous API reads
-            cachedLatest.set(snapshot);
+                    try (ResultSet keys = pstmt.getGeneratedKeys()) {
+                        if (keys.next()) {
+                            localId = keys.getLong(1);
+                        }
+                    }
 
-        } catch (SQLException e) {
+                    // Enqueue into Transactional Outbox in the same transaction
+                    String eventId = outboxRepository.getSourceInstanceId() + ":RATE_SNAPSHOT:" + snapshot.cycleId() + ":" + localId;
+                    Map<String, Object> payloadMap = buildSnapshotPayload(localId, snapshot, buy, sell, buyDetailsJson, sellDetailsJson);
+                    String payloadJson = objectMapper.writeValueAsString(payloadMap);
+
+                    outboxRepository.enqueueEvent(conn, eventId, OutboxEvent.TYPE_RATE_SNAPSHOT, String.valueOf(snapshot.cycleId()), payloadJson);
+                }
+
+                conn.commit();
+
+                // Update in-memory atomic reference for instantaneous API reads
+                cachedLatest.set(snapshot);
+
+            } catch (Exception e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(autoCommit);
+            }
+
+        } catch (Exception e) {
             log.error("Failed to persist rate snapshot for cycle #{}: {}", snapshot.cycleId(), e.getMessage(), e);
             // Even if disk write fails, update in-memory cache so current traffic is not interrupted
             cachedLatest.set(snapshot);
@@ -224,6 +261,44 @@ public class SqliteRateRepository implements RateRepository {
                 buyMarket,
                 sellMarket
         );
+    }
+
+    private Map<String, Object> buildSnapshotPayload(long localId, RateSnapshot snapshot,
+                                                     MarketSummary buy, MarketSummary sell,
+                                                     String buyDetailsJson, String sellDetailsJson) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("local_id", localId);
+        map.put("cycle_id", snapshot.cycleId());
+        map.put("captured_at", snapshot.timestamp().toString());
+        map.put("duration_ms", snapshot.durationMs());
+        map.put("is_stale", snapshot.stale() ? 1 : 0);
+        map.put("status", snapshot.status());
+        map.put("fiat", buy.fiat());
+        map.put("asset", buy.asset());
+
+        // Buy
+        map.put("buy_reference_price", buy.referencePrice().toPlainString());
+        map.put("buy_average_price", buy.averagePrice().toPlainString());
+        map.put("buy_median_price", buy.medianPrice().toPlainString());
+        map.put("buy_min_price", buy.minPrice().toPlainString());
+        map.put("buy_max_price", buy.maxPrice().toPlainString());
+        map.put("buy_valid_count", buy.validCount());
+        map.put("buy_discarded_count", buy.discardedCount());
+        map.put("buy_total_received", buy.totalReceived());
+        map.put("buy_details_json", buyDetailsJson);
+
+        // Sell
+        map.put("sell_reference_price", sell.referencePrice().toPlainString());
+        map.put("sell_average_price", sell.averagePrice().toPlainString());
+        map.put("sell_median_price", sell.medianPrice().toPlainString());
+        map.put("sell_min_price", sell.minPrice().toPlainString());
+        map.put("sell_max_price", sell.maxPrice().toPlainString());
+        map.put("sell_valid_count", sell.validCount());
+        map.put("sell_discarded_count", sell.discardedCount());
+        map.put("sell_total_received", sell.totalReceived());
+        map.put("sell_details_json", sellDetailsJson);
+
+        return map;
     }
 
     private String serializeDetails(List<BankRateSummary> bankSummaries, List<P2POffer> topOffers) {

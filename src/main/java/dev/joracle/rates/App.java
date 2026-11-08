@@ -10,11 +10,17 @@ import dev.joracle.rates.config.JsonConfig;
 import dev.joracle.rates.config.ThymeleafConfig;
 import dev.joracle.rates.db.DatabaseManager;
 import dev.joracle.rates.db.DatabaseMigrator;
+import dev.joracle.rates.db.OracleDatabaseManager;
 import dev.joracle.rates.repository.ApiClientRepository;
+import dev.joracle.rates.repository.OutboxRepository;
 import dev.joracle.rates.repository.RateRepository;
 import dev.joracle.rates.repository.SqliteApiClientRepository;
+import dev.joracle.rates.repository.SqliteOutboxRepository;
 import dev.joracle.rates.repository.SqliteRateRepository;
+import dev.joracle.rates.repository.oracle.OracleSyncRepository;
+import dev.joracle.rates.service.AdminSessionService;
 import dev.joracle.rates.service.ApiKeyService;
+import dev.joracle.rates.service.OracleSyncWorker;
 import dev.joracle.rates.service.RateAnalysisService;
 import dev.joracle.rates.service.RatePollerService;
 import io.javalin.Javalin;
@@ -51,8 +57,9 @@ public class App {
         // 3. Dependency Injection (Composition Root)
         BinanceP2PClient binanceClient = new BinanceP2PClient(objectMapper, config);
         RateAnalysisService analysisService = new RateAnalysisService();
-        RateRepository rateRepository = new SqliteRateRepository(databaseManager, objectMapper);
-        ApiClientRepository clientRepository = new SqliteApiClientRepository(databaseManager);
+        OutboxRepository outboxRepository = new SqliteOutboxRepository(databaseManager);
+        RateRepository rateRepository = new SqliteRateRepository(databaseManager, objectMapper, outboxRepository);
+        ApiClientRepository clientRepository = new SqliteApiClientRepository(databaseManager, outboxRepository, objectMapper);
         ApiKeyService apiKeyService = new ApiKeyService(clientRepository);
         String envAdminKey = System.getenv("ADMIN_API_KEY");
         if (envAdminKey != null && !envAdminKey.isBlank()) {
@@ -66,9 +73,28 @@ public class App {
                 config
         );
 
-        dev.joracle.rates.service.AdminSessionService sessionService = new dev.joracle.rates.service.AdminSessionService();
-        RateController rateController = new RateController(rateRepository, pollerService, apiKeyService);
-        AdminController adminController = new AdminController(rateRepository, pollerService, apiKeyService, config, sessionService);
+        // Oracle Cloud Autonomous Sync Integration
+        OracleDatabaseManager oracleDatabaseManager = new OracleDatabaseManager(config);
+        OracleSyncRepository oracleSyncRepository = new OracleSyncRepository(oracleDatabaseManager, objectMapper);
+        OracleSyncWorker oracleSyncWorker = new OracleSyncWorker(
+                oracleDatabaseManager,
+                oracleSyncRepository,
+                outboxRepository,
+                config
+        );
+
+        AdminSessionService sessionService = new AdminSessionService();
+        RateController rateController = new RateController(rateRepository, pollerService, apiKeyService, oracleSyncWorker, outboxRepository);
+        AdminController adminController = new AdminController(
+                rateRepository,
+                pollerService,
+                apiKeyService,
+                config,
+                sessionService,
+                oracleDatabaseManager,
+                oracleSyncWorker,
+                outboxRepository
+        );
         PortalController portalController = new PortalController(rateRepository, apiKeyService, config);
 
         // 4. Web Framework (Javalin 7 with Virtual Threads & Thymeleaf)
@@ -108,14 +134,17 @@ public class App {
         log.info("  GET  /api/v1/rates/history");
         log.info("  POST /api/v1/rates/refresh (ADMIN only)");
 
-        // 5. Start Background Poller Worker
+        // 5. Start Background Workers
         pollerService.start();
+        oracleSyncWorker.start();
 
         // 6. Graceful Shutdown Hook
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             log.info("Shutting down Bolivia P2P Rates Service...");
+            oracleSyncWorker.close();
             pollerService.close();
             app.stop();
+            oracleDatabaseManager.close();
             databaseManager.close();
             log.info("Service stopped gracefully.");
         }, "shutdown-hook"));

@@ -1,13 +1,16 @@
 package dev.joracle.rates.api;
 
 import dev.joracle.rates.config.AppConfig;
+import dev.joracle.rates.db.OracleDatabaseManager;
 import dev.joracle.rates.model.ApiClient;
 import dev.joracle.rates.model.ClientCreationResult;
 import dev.joracle.rates.model.RateSnapshot;
+import dev.joracle.rates.repository.OutboxRepository;
 import dev.joracle.rates.repository.RateRepository;
 import dev.joracle.rates.service.AdminSessionService;
 import dev.joracle.rates.service.AdminSessionService.AdminSession;
 import dev.joracle.rates.service.ApiKeyService;
+import dev.joracle.rates.service.OracleSyncWorker;
 import dev.joracle.rates.service.RatePollerService;
 import io.javalin.config.RoutesConfig;
 import io.javalin.http.Context;
@@ -39,6 +42,9 @@ public class AdminController {
     private final ApiKeyService apiKeyService;
     private final AppConfig config;
     private final AdminSessionService sessionService;
+    private final OracleDatabaseManager oracleDbManager;
+    private final OracleSyncWorker oracleSyncWorker;
+    private final OutboxRepository outboxRepository;
 
     public AdminController(
             RateRepository rateRepository,
@@ -46,7 +52,7 @@ public class AdminController {
             ApiKeyService apiKeyService,
             AppConfig config
     ) {
-        this(rateRepository, pollerService, apiKeyService, config, new AdminSessionService());
+        this(rateRepository, pollerService, apiKeyService, config, new AdminSessionService(), null, null, null);
     }
 
     public AdminController(
@@ -56,11 +62,27 @@ public class AdminController {
             AppConfig config,
             AdminSessionService sessionService
     ) {
+        this(rateRepository, pollerService, apiKeyService, config, sessionService, null, null, null);
+    }
+
+    public AdminController(
+            RateRepository rateRepository,
+            RatePollerService pollerService,
+            ApiKeyService apiKeyService,
+            AppConfig config,
+            AdminSessionService sessionService,
+            OracleDatabaseManager oracleDbManager,
+            OracleSyncWorker oracleSyncWorker,
+            OutboxRepository outboxRepository
+    ) {
         this.rateRepository = Objects.requireNonNull(rateRepository, "rateRepository cannot be null");
         this.pollerService = Objects.requireNonNull(pollerService, "pollerService cannot be null");
         this.apiKeyService = Objects.requireNonNull(apiKeyService, "apiKeyService cannot be null");
         this.config = Objects.requireNonNull(config, "config cannot be null");
         this.sessionService = Objects.requireNonNull(sessionService, "sessionService cannot be null");
+        this.oracleDbManager = oracleDbManager;
+        this.oracleSyncWorker = oracleSyncWorker;
+        this.outboxRepository = outboxRepository;
     }
 
     public void registerRoutes(RoutesConfig routes) {
@@ -74,6 +96,8 @@ public class AdminController {
         routes.post("/admin/clients", this::handleCreateClient);
         routes.post("/admin/clients/{id}/toggle", this::handleToggleClient);
         routes.delete("/admin/clients/{id}", this::handleDeleteClient);
+        routes.get("/admin/partials/oracle-sync", this::renderOracleSyncFragment);
+        routes.post("/admin/oracle-sync", this::handleManualOracleSync);
     }
 
     private void renderDashboard(Context ctx) {
@@ -375,6 +399,85 @@ public class AdminController {
         ctx.render("admin.html", model);
     }
 
+    private void renderOracleSyncFragment(Context ctx) {
+        Optional<AdminAuthContext> authOpt = resolveAdminAuth(ctx);
+        if (authOpt.isEmpty()) {
+            ctx.status(HttpStatus.UNAUTHORIZED).result("No autorizado");
+            return;
+        }
+
+        Map<String, Object> model = new HashMap<>();
+        populateOracleSyncModel(model, null);
+        model.put("publicBasePath", config.publicBasePath());
+        model.put("csrfToken", authOpt.get().session() != null ? authOpt.get().session().csrfToken() : "");
+        ctx.render("fragments/oracle-sync-section.html", model);
+    }
+
+    private void handleManualOracleSync(Context ctx) {
+        Optional<AdminAuthContext> authOpt = resolveAdminAuth(ctx);
+        if (authOpt.isEmpty()) {
+            ctx.status(HttpStatus.UNAUTHORIZED).result("No autorizado");
+            return;
+        }
+        if (!validateCsrf(ctx, authOpt.get())) {
+            ctx.status(HttpStatus.FORBIDDEN).result("Solicitud rechazada: verificación CSRF fallida");
+            return;
+        }
+
+        String syncMessage = "Sincronización manual completada con éxito.";
+        if (oracleSyncWorker != null) {
+            int result = oracleSyncWorker.syncOnce();
+            if (result < 0) {
+                syncMessage = "Error al sincronizar: " + (oracleSyncWorker.getLastError() != null ? oracleSyncWorker.getLastError() : "Fallo de conexión");
+            } else if (result == 0) {
+                syncMessage = "No había eventos pendientes para sincronizar.";
+            } else {
+                syncMessage = "Se sincronizaron exitosamente " + result + " evento(s) hacia Oracle.";
+            }
+        } else {
+            syncMessage = "La sincronización hacia Oracle no está configurada o se encuentra desactivada.";
+        }
+
+        Map<String, Object> model = new HashMap<>();
+        populateOracleSyncModel(model, syncMessage);
+        model.put("publicBasePath", config.publicBasePath());
+        model.put("csrfToken", authOpt.get().session() != null ? authOpt.get().session().csrfToken() : "");
+        ctx.render("fragments/oracle-sync-section.html", model);
+    }
+
+    private void populateOracleSyncModel(Map<String, Object> model, String syncMessage) {
+        boolean enabled = oracleDbManager != null && oracleDbManager.isEnabled();
+        long pending = outboxRepository != null ? outboxRepository.countPendingEvents() : 0;
+        int activeConn = oracleDbManager != null ? oracleDbManager.getActiveConnections() : 0;
+        int totalConn = oracleDbManager != null ? oracleDbManager.getTotalConnections() : 0;
+        String lastSuccess = (oracleSyncWorker != null && oracleSyncWorker.getLastSuccessInstant() != null)
+                ? oracleSyncWorker.getLastSuccessInstant().toString()
+                : "Nunca";
+        String lastError = oracleSyncWorker != null ? oracleSyncWorker.getLastError() : null;
+        long totalSynced = oracleSyncWorker != null ? oracleSyncWorker.getTotalEventsSynced() : 0;
+
+        String syncStatus = "DISABLED";
+        if (enabled) {
+            if (lastError != null && oracleSyncWorker.getConsecutiveFailures() > 0) {
+                syncStatus = "ERROR";
+            } else if (pending > 0) {
+                syncStatus = "PENDING";
+            } else {
+                syncStatus = "SYNCED";
+            }
+        }
+
+        model.put("oracleEnabled", enabled);
+        model.put("oracleSyncStatus", syncStatus);
+        model.put("oraclePendingEvents", pending);
+        model.put("oracleActiveConnections", activeConn);
+        model.put("oracleTotalConnections", totalConn);
+        model.put("oracleLastSuccess", lastSuccess);
+        model.put("oracleLastError", lastError);
+        model.put("oracleTotalSynced", totalSynced);
+        model.put("oracleSyncMessage", syncMessage);
+    }
+
     private void populateDashboardModel(Map<String, Object> model, String refreshMsg, ClientCreationResult newKey) {
         RateSnapshot snapshot = rateRepository.findLatest().orElse(null);
         List<ApiClient> clients = apiKeyService.listAllClients();
@@ -383,6 +486,7 @@ public class AdminController {
         model.put("refreshMessage", refreshMsg);
         model.put("newClientResult", newKey);
         model.put("publicBasePath", config.publicBasePath());
+        populateOracleSyncModel(model, null);
     }
 
     public record AdminAuthContext(

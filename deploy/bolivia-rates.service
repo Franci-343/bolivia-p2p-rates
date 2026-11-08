@@ -19,6 +19,20 @@ Environment=SQLITE_DB_PATH=database/rates.db
 Environment=FIAT_CURRENCY=BOB
 Environment=ASSET_CURRENCY=USDT
 
+# Oracle Autonomous Database Sync Configuration (Always Free, Max 1 connection, 0 at rest)
+Environment=ORACLE_SYNC_ENABLED=false
+Environment=ORACLE_JDBC_URL=jdbc:oracle:thin:@francodb_low
+Environment=ORACLE_DB_USER=BOLIVIA_P2P
+Environment=ORACLE_DB_PASSWORD=
+Environment=ORACLE_TNS_ADMIN=/home/ubuntu/.config/oracle_db/Wallet_FRANCODB
+Environment=ORACLE_POOL_MAX_SIZE=1
+Environment=ORACLE_SYNC_INTERVAL_SECONDS=60
+Environment=ORACLE_SYNC_BATCH_SIZE=25
+Environment=SQLITE_RECENT_SNAPSHOTS=100
+
+# Archivo opcional de variables y secretos locales (anula los valores por defecto sin exponerlos en git)
+EnvironmentFile=-/home/ubuntu/bolivia-p2p-rates/.env
+
 # Hard memory protection for 1GB RAM VM
 MemoryMax=450M
 
