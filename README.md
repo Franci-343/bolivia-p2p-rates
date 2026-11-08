@@ -376,9 +376,15 @@ El proyecto implementa tecnicas de optimizacion en multiples capas para garantiz
 
 ---
 
-## Variables de Entorno (Configuracion)
+## Configuración de la Aplicación
 
-### Configuracion General del Servicio
+El sistema utiliza una jerarquía de configuración estándar y flexible en Java:
+1. **Propiedades del Sistema JVM:** `-Dclave=valor` (máxima precedencia).
+2. **Variables de Entorno:** `VARIABLE=valor` (ideal para contenedores o servicios del sistema operativo).
+3. **Archivo de Propiedades Java:** `rates.properties` o `config.properties` en el directorio de trabajo (ver plantilla `config.properties.example`). Permite configurar contraseñas locales sin exponerlas en git.
+4. **Valores por Defecto:** Valores seguros embebidos en el código.
+
+### Propiedades y Variables de Entorno Soportadas
 
 | Variable | Valor por Defecto | Descripcion |
 | :--- | :--- | :--- |

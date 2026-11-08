@@ -1,0 +1,35 @@
+# ==============================================================================
+# Bolivia P2P Rates Monitor - Configuración Local de Propiedades Java
+# ==============================================================================
+# Copia este archivo como 'rates.properties' o 'config.properties' en el directorio
+# de trabajo de la aplicación para configurar contraseñas y parámetros locales.
+# Este archivo es ignorado por git para evitar exponer credenciales.
+
+# ------------------------------------------------------------------------------
+# 1. Configuración del Servidor HTTP
+# ------------------------------------------------------------------------------
+server.port=8080
+public.base.path=
+
+# ------------------------------------------------------------------------------
+# 2. Configuración del Recolector Binance P2P
+# ------------------------------------------------------------------------------
+poll.interval.seconds=600
+refresh.cooldown.seconds=60
+binance.fetch.rows=10
+fiat.currency=BOB
+asset.currency=USDT
+sqlite.db.path=database/rates.db
+
+# ------------------------------------------------------------------------------
+# 3. Sincronización con Oracle Autonomous Database (Always Free)
+# ------------------------------------------------------------------------------
+oracle.sync.enabled=true
+oracle.jdbc.url=jdbc:oracle:thin:@francodb_low
+oracle.db.user=BOLIVIA_P2P
+oracle.db.password=tu_contrasena_de_oracle_aqui
+oracle.tns.admin=/home/ubuntu/.config/oracle_db/Wallet_FRANCODB
+oracle.pool.max.size=1
+oracle.sync.interval.seconds=60
+oracle.sync.batch.size=25
+sqlite.recent.snapshots=100

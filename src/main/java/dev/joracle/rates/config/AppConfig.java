@@ -1,8 +1,26 @@
 package dev.joracle.rates.config;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.InputStream;
+import java.io.Reader;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Properties;
+
 /**
- * Application configuration loaded from environment variables with sensible defaults.
- * Follows the recommendations in docs/PLAN_BOLIVIA_P2P_RATES.md.
+ * Application configuration loaded from Java properties files, environment variables,
+ * or system properties with sensible defaults.
+ * <p>
+ * Loading Hierarchy (highest precedence first):
+ * 1. JVM System Properties (-Dkey=value)
+ * 2. Operating System Environment Variables (KEY=value)
+ * 3. External Java Properties file (rates.properties, config.properties, or -Dconfig.file)
+ * 4. Internal defaults defined in code
  */
 public record AppConfig(
         int serverPort,
@@ -23,6 +41,8 @@ public record AppConfig(
         int oracleSyncBatchSize,
         int sqliteRecentSnapshots
 ) {
+    private static final Logger log = LoggerFactory.getLogger(AppConfig.class);
+
     public AppConfig(
             int serverPort,
             int pollIntervalSeconds,
@@ -52,28 +72,38 @@ public record AppConfig(
                 false, "jdbc:oracle:thin:@francodb_low", "BOLIVIA_P2P", "", "", 1, 60, 25, 100);
     }
 
+    /**
+     * Factory method loading configuration using Java properties file combined with environment variables.
+     */
     public static AppConfig fromEnv() {
-        int serverPort = getEnvAsInt("PORT", 8080);
+        return fromProperties(loadProperties());
+    }
+
+    /**
+     * Factory method building AppConfig from a given Properties object with fallback to environment and defaults.
+     */
+    public static AppConfig fromProperties(Properties props) {
+        int serverPort = getInt(props, "PORT", "server.port", 8080);
         // Default to 600s (10 min) as recommended in PLAN_BOLIVIA_P2P_RATES.md to protect against WAF blocks
-        int pollIntervalSeconds = getEnvAsInt("POLL_INTERVAL_SECONDS", 600);
-        int cooldownSeconds = getEnvAsInt("REFRESH_COOLDOWN_SECONDS", 60);
-        int binanceRows = getEnvAsInt("BINANCE_FETCH_ROWS", 10);
-        String fiat = getEnvOrDefault("FIAT_CURRENCY", "BOB");
-        String asset = getEnvOrDefault("ASSET_CURRENCY", "USDT");
-        String dbPath = getEnvOrDefault("SQLITE_DB_PATH", "database/rates.db");
-        String publicBasePath = normalizeBasePath(getEnvOrDefault("PUBLIC_BASE_PATH", ""));
+        int pollIntervalSeconds = getInt(props, "POLL_INTERVAL_SECONDS", "poll.interval.seconds", 600);
+        int cooldownSeconds = getInt(props, "REFRESH_COOLDOWN_SECONDS", "refresh.cooldown.seconds", 60);
+        int binanceRows = getInt(props, "BINANCE_FETCH_ROWS", "binance.fetch.rows", 10);
+        String fiat = getString(props, "FIAT_CURRENCY", "fiat.currency", "BOB");
+        String asset = getString(props, "ASSET_CURRENCY", "asset.currency", "USDT");
+        String dbPath = getString(props, "SQLITE_DB_PATH", "sqlite.db.path", "database/rates.db");
+        String publicBasePath = normalizeBasePath(getString(props, "PUBLIC_BASE_PATH", "public.base.path", ""));
 
         // Oracle Cloud Autonomous configuration
-        boolean oracleSyncEnabled = getEnvAsBoolean("ORACLE_SYNC_ENABLED", false);
-        String oracleJdbcUrl = getEnvOrDefault("ORACLE_JDBC_URL", "jdbc:oracle:thin:@francodb_low");
-        String oracleDbUser = getEnvOrDefault("ORACLE_DB_USER", "BOLIVIA_P2P");
-        String oracleDbPassword = getEnvOrDefault("ORACLE_DB_PASSWORD", "");
-        String oracleTnsAdmin = getEnvOrDefault("ORACLE_TNS_ADMIN", "");
+        boolean oracleSyncEnabled = getBoolean(props, "ORACLE_SYNC_ENABLED", "oracle.sync.enabled", false);
+        String oracleJdbcUrl = getString(props, "ORACLE_JDBC_URL", "oracle.jdbc.url", "jdbc:oracle:thin:@francodb_low");
+        String oracleDbUser = getString(props, "ORACLE_DB_USER", "oracle.db.user", "BOLIVIA_P2P");
+        String oracleDbPassword = getString(props, "ORACLE_DB_PASSWORD", "oracle.db.password", "");
+        String oracleTnsAdmin = getString(props, "ORACLE_TNS_ADMIN", "oracle.tns.admin", "");
         // Strict invariant: pool size is capped at 1 for this process
-        int oraclePoolMaxSize = Math.min(1, Math.max(1, getEnvAsInt("ORACLE_POOL_MAX_SIZE", 1)));
-        int oracleSyncIntervalSeconds = Math.max(10, getEnvAsInt("ORACLE_SYNC_INTERVAL_SECONDS", 60));
-        int oracleSyncBatchSize = Math.max(1, Math.min(100, getEnvAsInt("ORACLE_SYNC_BATCH_SIZE", 25)));
-        int sqliteRecentSnapshots = Math.max(10, getEnvAsInt("SQLITE_RECENT_SNAPSHOTS", 100));
+        int oraclePoolMaxSize = Math.min(1, Math.max(1, getInt(props, "ORACLE_POOL_MAX_SIZE", "oracle.pool.max.size", 1)));
+        int oracleSyncIntervalSeconds = Math.max(10, getInt(props, "ORACLE_SYNC_INTERVAL_SECONDS", "oracle.sync.interval.seconds", 60));
+        int oracleSyncBatchSize = Math.max(1, Math.min(100, getInt(props, "ORACLE_SYNC_BATCH_SIZE", "oracle.sync.batch.size", 25)));
+        int sqliteRecentSnapshots = Math.max(10, getInt(props, "SQLITE_RECENT_SNAPSHOTS", "sqlite.recent.snapshots", 100));
 
         return new AppConfig(
                 serverPort, pollIntervalSeconds, cooldownSeconds, binanceRows,
@@ -82,6 +112,61 @@ public record AppConfig(
                 oracleTnsAdmin, oraclePoolMaxSize, oracleSyncIntervalSeconds,
                 oracleSyncBatchSize, sqliteRecentSnapshots
         );
+    }
+
+    /**
+     * Searches and loads properties from candidate locations:
+     * 1. Path specified in system property 'config.file' or env var 'CONFIG_FILE'
+     * 2. Working directory: rates.properties
+     * 3. Working directory: config.properties
+     * 4. Working directory: application.properties
+     * 5. User home directory: ~/.config/bolivia-p2p-rates/rates.properties
+     * 6. Classpath: application.properties
+     */
+    public static Properties loadProperties() {
+        Properties props = new Properties();
+
+        // 1. Optional classpath resource
+        try (InputStream in = AppConfig.class.getClassLoader().getResourceAsStream("application.properties")) {
+            if (in != null) {
+                props.load(in);
+            }
+        } catch (Exception ignored) {}
+
+        // 2. Candidate external file paths in order of preference
+        List<Path> candidates = new ArrayList<>();
+
+        String customFile = System.getProperty("config.file");
+        if (customFile == null || customFile.isBlank()) {
+            customFile = System.getenv("CONFIG_FILE");
+        }
+        if (customFile != null && !customFile.isBlank()) {
+            candidates.add(Path.of(customFile.trim()));
+        }
+
+        candidates.add(Path.of("rates.properties"));
+        candidates.add(Path.of("config.properties"));
+        candidates.add(Path.of("application.properties"));
+
+        String userHome = System.getProperty("user.home");
+        if (userHome != null && !userHome.isBlank()) {
+            candidates.add(Path.of(userHome, ".config", "bolivia-p2p-rates", "rates.properties"));
+            candidates.add(Path.of(userHome, ".config", "bolivia-p2p-rates", "config.properties"));
+        }
+
+        for (Path candidate : candidates) {
+            if (Files.isRegularFile(candidate) && Files.isReadable(candidate)) {
+                try (Reader reader = Files.newBufferedReader(candidate, StandardCharsets.UTF_8)) {
+                    props.load(reader);
+                    log.info("Loaded application configuration properties from: {}", candidate.toAbsolutePath());
+                    break; // Use the first found external properties file
+                } catch (Exception e) {
+                    log.warn("Failed to read properties file at {}: {}", candidate, e.getMessage());
+                }
+            }
+        }
+
+        return props;
     }
 
     /**
@@ -115,28 +200,50 @@ public record AppConfig(
         return publicBasePath.isEmpty() ? cleanPath : publicBasePath + cleanPath;
     }
 
-    private static int getEnvAsInt(String key, int defaultValue) {
-        String value = System.getenv(key);
-        if (value == null || value.isBlank()) {
-            return defaultValue;
+    private static String getString(Properties props, String envKey, String dottedKey, String defaultValue) {
+        // 1. System property (-D)
+        String val = System.getProperty(envKey);
+        if (val != null && !val.isBlank()) return val.trim();
+        if (dottedKey != null) {
+            val = System.getProperty(dottedKey);
+            if (val != null && !val.isBlank()) return val.trim();
         }
+
+        // 2. Environment variable
+        val = System.getenv(envKey);
+        if (val != null && !val.isBlank()) return val.trim();
+        if (dottedKey != null) {
+            String altEnv = dottedKey.replace('.', '_').toUpperCase();
+            val = System.getenv(altEnv);
+            if (val != null && !val.isBlank()) return val.trim();
+        }
+
+        // 3. Properties object (file)
+        if (props != null) {
+            if (dottedKey != null) {
+                val = props.getProperty(dottedKey);
+                if (val != null && !val.isBlank()) return val.trim();
+            }
+            val = props.getProperty(envKey);
+            if (val != null && !val.isBlank()) return val.trim();
+        }
+
+        return defaultValue;
+    }
+
+    private static int getInt(Properties props, String envKey, String dottedKey, int defaultValue) {
+        String val = getString(props, envKey, dottedKey, null);
+        if (val == null || val.isBlank()) return defaultValue;
         try {
-            return Integer.parseInt(value.trim());
+            return Integer.parseInt(val.trim());
         } catch (NumberFormatException e) {
             return defaultValue;
         }
     }
 
-    private static boolean getEnvAsBoolean(String key, boolean defaultValue) {
-        String value = System.getenv(key);
-        if (value == null || value.isBlank()) {
-            return defaultValue;
-        }
-        return value.trim().equalsIgnoreCase("true") || value.trim().equals("1");
-    }
-
-    private static String getEnvOrDefault(String key, String defaultValue) {
-        String value = System.getenv(key);
-        return (value != null && !value.isBlank()) ? value.trim() : defaultValue;
+    private static boolean getBoolean(Properties props, String envKey, String dottedKey, boolean defaultValue) {
+        String val = getString(props, envKey, dottedKey, null);
+        if (val == null || val.isBlank()) return defaultValue;
+        return val.trim().equalsIgnoreCase("true") || val.trim().equals("1");
     }
 }

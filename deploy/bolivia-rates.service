@@ -30,9 +30,6 @@ Environment=ORACLE_SYNC_INTERVAL_SECONDS=60
 Environment=ORACLE_SYNC_BATCH_SIZE=25
 Environment=SQLITE_RECENT_SNAPSHOTS=100
 
-# Archivo opcional de variables y secretos locales (anula los valores por defecto sin exponerlos en git)
-EnvironmentFile=-/home/ubuntu/bolivia-p2p-rates/.env
-
 # Hard memory protection for 1GB RAM VM
 MemoryMax=450M
 

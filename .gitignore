@@ -46,3 +46,10 @@ custom-jre/
 bot-docs/
 .env
 .env.*
+
+# Archivos de propiedades Java con credenciales locales
+rates.properties
+config.properties
+application.properties
+*.properties
+!*.properties.example
