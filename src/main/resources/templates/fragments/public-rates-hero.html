@@ -3,21 +3,21 @@
      hx-get="/portal/rates-card"
      hx-trigger="every 25s"
      hx-swap="outerHTML"
-     class="w-full max-w-5xl mx-auto space-y-4">
+     class="w-full max-w-5xl mx-auto space-y-3 sm:space-y-4">
 
     <!-- Header bar with title, timestamp, and manual refresh button -->
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 px-1">
         <div class="flex items-center gap-2">
-            <span class="relative flex h-2.5 w-2.5">
+            <span class="relative flex h-2.5 w-2.5 shrink-0">
                 <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
             </span>
             <span class="text-xs sm:text-sm font-bold text-white tracking-tight">Cotización P2P en Tiempo Real</span>
-            <span class="text-[11px] text-slate-400 hidden sm:inline">&bull; USDT / BOB</span>
+            <span class="text-[11px] text-slate-400 hidden xs:inline sm:inline">&bull; USDT / BOB</span>
         </div>
 
-        <div class="flex items-center gap-3 self-end sm:self-auto text-xs">
-            <span class="text-slate-400 font-mono text-[11px]" th:text="${formattedTime != null ? formattedTime : 'Sincronizando con Binance...'}">
+        <div class="flex items-center justify-between sm:justify-end gap-2 text-xs w-full sm:w-auto">
+            <span class="text-slate-400 font-mono text-[10px] sm:text-[11px] truncate" th:text="${formattedTime != null ? formattedTime : 'Sincronizando con Binance...'}">
                 7 nov 2026, 12:02 (Hora Bolivia)
             </span>
             <button type="button"
@@ -26,103 +26,103 @@
                     hx-target="#public-rates-hero"
                     hx-swap="outerHTML"
                     title="Actualizar cotización ahora"
-                    class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white font-medium text-xs transition active:scale-95 flex items-center gap-1.5 shadow-sm">
+                    class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white font-medium text-[11px] sm:text-xs transition active:scale-95 flex items-center gap-1 shadow-sm shrink-0">
                 <span>🔄</span>
-                <span class="hidden sm:inline">Actualizar</span>
+                <span>Actualizar</span>
             </button>
         </div>
     </div>
 
     <!-- The Two Giant Cards (Compra y Venta) -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-6">
         
         <!-- CARD 1: PRECIO DE COMPRA (Quiero vender USDT -> Recibo Bolivianos) -->
-        <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-950/30 via-slate-900/90 to-slate-950 border border-emerald-500/40 hover:border-emerald-400/60 p-6 sm:p-8 transition-all duration-300 shadow-xl shadow-emerald-950/20 group">
+        <div class="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-emerald-950/30 via-slate-900/90 to-slate-950 border border-emerald-500/40 hover:border-emerald-400/60 p-4 sm:p-6 md:p-8 transition-all duration-300 shadow-xl shadow-emerald-950/20 group">
             <div class="absolute -right-10 -top-10 w-40 h-40 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none group-hover:bg-emerald-500/15 transition-all"></div>
 
-            <div class="flex items-center justify-between mb-4">
-                <span class="text-xs font-black tracking-widest uppercase text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 px-3 py-1 rounded-full">
+            <div class="flex items-center justify-between gap-2 mb-3">
+                <span class="text-[10px] sm:text-xs font-black tracking-wider sm:tracking-widest uppercase text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full whitespace-nowrap">
                     PRECIO DE COMPRA
                 </span>
-                <span class="text-[11px] font-semibold text-emerald-400 flex items-center gap-1">
+                <span class="text-[10px] sm:text-[11px] font-semibold text-emerald-400 flex items-center gap-1 shrink-0">
                     <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                     <span>Recibes BOB</span>
                 </span>
             </div>
 
-            <div class="my-4">
-                <div class="text-[11px] text-slate-400 font-medium mb-1">Cotización mediana de mercado:</div>
-                <div class="text-5xl sm:text-7xl font-black text-white font-mono tracking-tight flex items-baseline gap-2">
-                    <span class="text-2xl sm:text-3xl text-emerald-400 font-bold">Bs.</span>
+            <div class="my-2.5 sm:my-4">
+                <div class="text-[10px] sm:text-[11px] text-slate-400 font-medium mb-0.5 sm:mb-1">Cotización mediana de mercado:</div>
+                <div class="text-4xl sm:text-6xl md:text-7xl font-black text-white font-mono tracking-tight flex items-baseline gap-1.5 sm:gap-2">
+                    <span class="text-xl sm:text-2xl md:text-3xl text-emerald-400 font-bold">Bs.</span>
                     <span th:text="${buyPrice != null ? buyPrice : (snapshot != null and snapshot.buyMarket() != null ? snapshot.buyMarket().referencePrice() : '--.--')}">12.19</span>
                 </div>
             </div>
 
-            <div class="pt-2 border-t border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs text-slate-400">
-                <div class="font-mono text-slate-300 text-[11px]">
+            <div class="pt-2 border-t border-slate-800/80 flex flex-row items-center justify-between gap-1 text-[11px] sm:text-xs text-slate-400">
+                <div class="font-mono text-slate-300">
                     1 USDT = <strong class="text-white font-bold" th:text="${buyPrice != null ? buyPrice + ' BOB' : (snapshot != null and snapshot.buyMarket() != null ? snapshot.buyMarket().referencePrice() + ' BOB' : '--')}">12.19 BOB</strong>
                 </div>
-                <div class="text-[11px] text-slate-500" th:if="${buyCount != null or (snapshot != null and snapshot.buyMarket() != null)}">
-                    <span th:text="${buyCount != null ? buyCount : snapshot.buyMarket().validCount()}">15</span> anuncios analizados
+                <div class="text-slate-500 text-[10px] sm:text-[11px]" th:if="${buyCount != null or (snapshot != null and snapshot.buyMarket() != null)}">
+                    <span th:text="${buyCount != null ? buyCount : snapshot.buyMarket().validCount()}">15</span> ofertas
                 </div>
             </div>
-            <p class="text-[11px] text-slate-500 mt-2 italic">
+            <p class="text-[10px] sm:text-[11px] text-slate-500 mt-1.5 italic leading-tight">
                 * Precio que abonan los compradores cuando tú vendes dólares digitales.
             </p>
         </div>
 
         <!-- CARD 2: PRECIO DE VENTA (Quiero comprar USDT -> Pago Bolivianos) -->
-        <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-rose-950/30 via-slate-900/90 to-slate-950 border border-rose-500/40 hover:border-rose-400/60 p-6 sm:p-8 transition-all duration-300 shadow-xl shadow-rose-950/20 group">
+        <div class="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-rose-950/30 via-slate-900/90 to-slate-950 border border-rose-500/40 hover:border-rose-400/60 p-4 sm:p-6 md:p-8 transition-all duration-300 shadow-xl shadow-rose-950/20 group">
             <div class="absolute -right-10 -top-10 w-40 h-40 bg-rose-500/10 rounded-full blur-3xl pointer-events-none group-hover:bg-rose-500/15 transition-all"></div>
 
-            <div class="flex items-center justify-between mb-4">
-                <span class="text-xs font-black tracking-widest uppercase text-rose-400 bg-rose-500/10 border border-rose-500/25 px-3 py-1 rounded-full">
+            <div class="flex items-center justify-between gap-2 mb-3">
+                <span class="text-[10px] sm:text-xs font-black tracking-wider sm:tracking-widest uppercase text-rose-400 bg-rose-500/10 border border-rose-500/25 px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full whitespace-nowrap">
                     PRECIO DE VENTA
                 </span>
-                <span class="text-[11px] font-semibold text-rose-400 flex items-center gap-1">
+                <span class="text-[10px] sm:text-[11px] font-semibold text-rose-400 flex items-center gap-1 shrink-0">
                     <span class="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse"></span>
                     <span>Pagas BOB</span>
                 </span>
             </div>
 
-            <div class="my-4">
-                <div class="text-[11px] text-slate-400 font-medium mb-1">Cotización mediana de mercado:</div>
-                <div class="text-5xl sm:text-7xl font-black text-white font-mono tracking-tight flex items-baseline gap-2">
-                    <span class="text-2xl sm:text-3xl text-rose-400 font-bold">Bs.</span>
+            <div class="my-2.5 sm:my-4">
+                <div class="text-[10px] sm:text-[11px] text-slate-400 font-medium mb-0.5 sm:mb-1">Cotización mediana de mercado:</div>
+                <div class="text-4xl sm:text-6xl md:text-7xl font-black text-white font-mono tracking-tight flex items-baseline gap-1.5 sm:gap-2">
+                    <span class="text-xl sm:text-2xl md:text-3xl text-rose-400 font-bold">Bs.</span>
                     <span th:text="${sellPrice != null ? sellPrice : (snapshot != null and snapshot.sellMarket() != null ? snapshot.sellMarket().referencePrice() : '--.--')}">11.81</span>
                 </div>
             </div>
 
-            <div class="pt-2 border-t border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs text-slate-400">
-                <div class="font-mono text-slate-300 text-[11px]">
+            <div class="pt-2 border-t border-slate-800/80 flex flex-row items-center justify-between gap-1 text-[11px] sm:text-xs text-slate-400">
+                <div class="font-mono text-slate-300">
                     1 USDT = <strong class="text-white font-bold" th:text="${sellPrice != null ? sellPrice + ' BOB' : (snapshot != null and snapshot.sellMarket() != null ? snapshot.sellMarket().referencePrice() + ' BOB' : '--')}">11.81 BOB</strong>
                 </div>
-                <div class="text-[11px] text-slate-500" th:if="${sellCount != null or (snapshot != null and snapshot.sellMarket() != null)}">
-                    <span th:text="${sellCount != null ? sellCount : snapshot.sellMarket().validCount()}">12</span> anuncios analizados
+                <div class="text-slate-500 text-[10px] sm:text-[11px]" th:if="${sellCount != null or (snapshot != null and snapshot.sellMarket() != null)}">
+                    <span th:text="${sellCount != null ? sellCount : snapshot.sellMarket().validCount()}">12</span> ofertas
                 </div>
             </div>
-            <p class="text-[11px] text-slate-500 mt-2 italic">
+            <p class="text-[10px] sm:text-[11px] text-slate-500 mt-1.5 italic leading-tight">
                 * Precio que cobran los comerciantes cuando tú compras dólares digitales.
             </p>
         </div>
     </div>
 
     <!-- Spread Bar & Bank Breakdown -->
-    <div class="p-4 rounded-2xl bg-slate-900/80 border border-slate-800/90 backdrop-blur-sm flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
-        <div class="flex items-center gap-2">
-            <span class="text-slate-400 font-semibold">Margen / Spread de Mercado:</span>
-            <span class="font-mono font-black text-white text-sm">
+    <div class="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-slate-900/80 border border-slate-800/90 backdrop-blur-sm flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
+        <div class="flex items-center gap-2 flex-wrap">
+            <span class="text-slate-400 font-medium text-[11px] sm:text-xs">Margen Comercial (Spread):</span>
+            <span class="font-mono font-black text-white text-xs sm:text-sm">
                 Bs. <span th:text="${spread != null ? spread : '0.00'}">0.38</span>
             </span>
-            <span class="text-sky-400 font-mono text-[11px] font-semibold bg-sky-500/10 px-2 py-0.5 rounded-full border border-sky-500/20"
+            <span class="text-sky-400 font-mono text-[10px] sm:text-[11px] font-semibold bg-sky-500/10 px-2 py-0.5 rounded-full border border-sky-500/20"
                   th:text="${spreadPercentage != null ? spreadPercentage + '%' : '0.0%'}">
                 3.15%
             </span>
         </div>
 
-        <div class="text-[11px] text-slate-400 flex items-center gap-2">
-            <span>🏦 Desglose bancario:</span>
-            <span class="text-slate-300 font-medium">Banco Unión, BISA, BNB, Mercantil, Sol</span>
+        <div class="text-[10px] sm:text-[11px] text-slate-400 flex items-center gap-1.5 flex-wrap">
+            <span>🏦 Bancos:</span>
+            <span class="text-slate-300 font-medium">Unión, BISA, BNB, Mercantil, Sol</span>
         </div>
     </div>
 

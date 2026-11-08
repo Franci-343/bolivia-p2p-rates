@@ -2,7 +2,7 @@
 <html lang="es" class="dark scroll-smooth">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
     <title>Bolivia P2P Rates — Portal de Desarrolladores & Wiki de la API</title>
 
     <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
@@ -17,6 +17,9 @@
             darkMode: 'class',
             theme: {
                 extend: {
+                    screens: {
+                        'xs': '420px',
+                    },
                     fontFamily: {
                         sans: ['"Plus Jakarta Sans"', 'system-ui', '-apple-system', 'sans-serif'],
                         mono: ['"JetBrains Mono"', 'monospace']
@@ -50,8 +53,8 @@
 
     <style>
         .custom-scrollbar::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
+            width: 5px;
+            height: 5px;
         }
         .custom-scrollbar::-webkit-scrollbar-track {
             background: #090e17;
@@ -66,7 +69,7 @@
 
         /* Ambient background subtle grid */
         .bg-grid-pattern {
-            background-size: 40px 40px;
+            background-size: 32px 32px;
             background-image: 
                 linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
                 linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
@@ -84,29 +87,29 @@
 <body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased selection:bg-sky-500 selection:text-white relative overflow-x-hidden">
 
     <!-- Ambient Gradient Orbs in Background -->
-    <div class="fixed top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[450px] bg-gradient-to-b from-sky-600/10 via-indigo-600/5 to-transparent blur-3xl pointer-events-none -z-10"></div>
-    <div class="fixed top-80 right-0 w-[500px] h-[500px] bg-emerald-600/5 blur-3xl pointer-events-none -z-10"></div>
+    <div class="fixed top-0 left-1/2 -translate-x-1/2 w-[600px] sm:w-[1000px] h-[350px] sm:h-[450px] bg-gradient-to-b from-sky-600/10 via-indigo-600/5 to-transparent blur-3xl pointer-events-none -z-10"></div>
+    <div class="fixed top-80 right-0 w-[300px] sm:w-[500px] h-[300px] sm:h-[500px] bg-emerald-600/5 blur-3xl pointer-events-none -z-10"></div>
 
-    <!-- Top Sticky Navigation Bar -->
-    <header class="bg-slate-950/80 backdrop-blur-xl border-b border-slate-800/80 sticky top-0 z-50 shadow-sm">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex justify-between items-center">
+    <!-- Top Sticky Navigation Bar (Responsive on all phones) -->
+    <header class="bg-slate-950/85 backdrop-blur-xl border-b border-slate-800/80 sticky top-0 z-50 shadow-sm">
+        <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-14 sm:h-16 flex justify-between items-center gap-2">
             
             <!-- Logo & Brand -->
-            <div class="flex items-center gap-3">
-                <a th:href="${publicBasePath != null && !publicBasePath.isEmpty() ? publicBasePath + '/' : '/'}" href="/" class="flex items-center gap-2.5 group">
-                    <span class="text-2xl transition-transform duration-300 group-hover:scale-110">🇧🇴</span>
-                    <div class="flex items-center gap-2">
-                        <span class="text-base font-extrabold text-white tracking-tight group-hover:text-sky-300 transition-colors">
-                            Bolivia P2P Rates
+            <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+                <a th:href="${publicBasePath != null && !publicBasePath.isEmpty() ? publicBasePath + '/' : '/'}" href="/" class="flex items-center gap-1.5 sm:gap-2.5 group">
+                    <span class="text-xl sm:text-2xl transition-transform duration-300 group-hover:scale-110">🇧🇴</span>
+                    <div class="flex items-center gap-1 sm:gap-2">
+                        <span class="text-xs sm:text-base font-extrabold text-white tracking-tight group-hover:text-sky-300 transition-colors whitespace-nowrap">
+                            Bolivia P2P<span class="hidden xs:inline sm:inline"> Rates</span>
                         </span>
-                        <span class="hidden sm:inline-flex text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/25">
-                            API REST
+                        <span class="text-[9px] sm:text-[10px] uppercase font-bold tracking-wider px-1.5 sm:px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/25">
+                            API
                         </span>
                     </div>
                 </a>
             </div>
 
-            <!-- Ticker preview in navbar (when snapshot available) -->
+            <!-- Ticker preview in navbar (visible on large screens) -->
             <div th:if="${buyPrice != null and sellPrice != null}" 
                  class="hidden lg:flex items-center gap-3.5 text-xs bg-slate-900/90 border border-slate-800/90 px-3.5 py-1.5 rounded-full shadow-inner">
                 <div class="flex items-center gap-1.5">
@@ -125,111 +128,111 @@
                 </div>
             </div>
 
-            <!-- Nav Links (ADMIN BUTTON IS HIDDEN AS REQUESTED) -->
-            <nav class="flex items-center gap-2 sm:gap-3 text-xs">
-                <a href="#wiki" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/80 transition font-medium">
-                    Wiki & Endpoints
+            <!-- Nav Links (Compact & Touch-Friendly on Mobile) -->
+            <nav class="flex items-center gap-1 sm:gap-2.5 text-xs">
+                <a href="#wiki" class="px-2 sm:px-3 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/80 transition font-medium">
+                    Wiki<span class="hidden sm:inline"> & Endpoints</span>
                 </a>
-                <a href="#playground" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/80 transition font-medium">
+                <a href="#playground" class="px-2 sm:px-3 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/80 transition font-medium">
                     Playground
                 </a>
                 <a href="#obtener-key" 
-                   class="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold transition shadow-sm shadow-emerald-600/30 active:scale-95 flex items-center gap-1.5">
+                   class="px-2.5 sm:px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold transition shadow-sm shadow-emerald-600/30 active:scale-95 flex items-center gap-1 shrink-0">
                     <span>⚡</span>
-                    <span>Obtener API Key</span>
+                    <span class="hidden sm:inline">Obtener </span><span>API Key</span>
                 </a>
             </nav>
         </div>
     </header>
 
     <!-- Hero Section -->
-    <section class="relative overflow-hidden pt-12 pb-16 border-b border-slate-900 bg-grid-pattern">
-        <div class="max-w-5xl mx-auto px-4 sm:px-6 text-center space-y-6">
+    <section class="relative overflow-hidden pt-8 sm:pt-12 pb-10 sm:pb-16 border-b border-slate-900 bg-grid-pattern">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 text-center space-y-4 sm:space-y-6">
             
             <!-- Live Status Badge -->
-            <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 backdrop-blur-sm shadow-sm">
-                <span class="relative flex h-2 w-2">
+            <div class="inline-flex items-center gap-1.5 sm:gap-2 px-3 py-1 rounded-full text-[11px] sm:text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 backdrop-blur-sm shadow-sm max-w-full truncate">
+                <span class="relative flex h-2 w-2 shrink-0">
                     <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                     <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                 </span>
-                <span>Servicio Activo &bull; Actualización en Tiempo Real &bull; Latencia &lt; 2 ms</span>
+                <span>Servicio Activo &bull; Tiempo Real &bull; Latencia &lt; 2 ms</span>
             </div>
 
             <!-- Main Title with polished gradient -->
-            <h1 class="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight leading-tight sm:leading-none">
+            <h1 class="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-white tracking-tight leading-tight sm:leading-tight">
                 La API de Tasas P2P para Bolivia <br class="hidden sm:inline">
                 <span class="bg-gradient-to-r from-sky-400 via-blue-400 to-emerald-400 bg-clip-text text-transparent">
                     rápida, confiable y abierta.
                 </span>
             </h1>
 
-            <p class="max-w-2xl mx-auto text-sm sm:text-base text-slate-300 font-normal leading-relaxed">
-                Integra cotizaciones reales de <strong class="text-white font-semibold">USDT/BOB</strong> en tus bots de Telegram, aplicaciones móviles o sistemas contables. Respuestas en menos de 2 milisegundos servidas directamente desde nuestro motor de persistencia local en SQLite.
+            <p class="max-w-2xl mx-auto text-xs sm:text-sm md:text-base text-slate-300 font-normal leading-relaxed px-1">
+                Integra cotizaciones reales de <strong class="text-white font-semibold">USDT/BOB</strong> en tus bots de Telegram, aplicaciones móviles o sistemas contables. Respuestas en menos de 2 milisegundos servidas desde memoria y SQLite.
             </p>
 
-            <!-- Action Buttons -->
-            <div class="flex flex-wrap items-center justify-center gap-3.5 pt-2">
+            <!-- Action Buttons (Responsive on Mobile) -->
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2.5 sm:gap-3.5 pt-1 sm:pt-2 max-w-sm sm:max-w-none mx-auto">
                 <a href="#obtener-key" 
-                   class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-sm transition shadow-lg shadow-blue-600/25 active:scale-95 flex items-center gap-2">
+                   class="w-full sm:w-auto px-5 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-sm transition shadow-lg shadow-blue-600/25 active:scale-95 flex items-center justify-center gap-2 text-center">
                     <span>🔑 Generar API Key Gratis</span>
                     <span class="text-xs font-normal opacity-85 bg-blue-700/60 px-1.5 py-0.5 rounded text-blue-100">(10 RPM)</span>
                 </a>
                 <a href="#playground" 
-                   class="px-5 py-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 hover:border-slate-600 text-slate-200 font-semibold text-sm transition active:scale-95 flex items-center gap-2 shadow-sm">
+                   class="w-full sm:w-auto px-5 py-3 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 hover:border-slate-600 text-slate-200 font-semibold text-sm transition active:scale-95 flex items-center justify-center gap-2 shadow-sm text-center">
                     <span>⚡ Probar en Vivo</span>
                 </a>
             </div>
 
             <!-- Giant Live Rates Cards (Dólar Paralelo / P2P Bolivia) -->
-            <div class="pt-4">
+            <div class="pt-2 sm:pt-4">
                 <div th:replace="~{fragments/public-rates-hero}"></div>
             </div>
 
             <!-- Features Quick Badges -->
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3.5 pt-6 max-w-4xl mx-auto text-left">
-                <div class="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 hover:border-sky-500/30 hover:-translate-y-0.5 transition-all duration-200 shadow-sm">
-                    <div class="w-8 h-8 rounded-xl bg-sky-500/10 text-sky-400 flex items-center justify-center font-bold text-base mb-2">⚡</div>
-                    <h2 class="text-xs font-bold text-white">&lt; 2 ms Latencia</h2>
-                    <p class="text-[11px] text-slate-400 mt-0.5 leading-snug">Respuestas instantáneas servidas desde memoria y SQLite WAL.</p>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3.5 pt-4 sm:pt-6 max-w-4xl mx-auto text-left">
+                <div class="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-slate-900/60 border border-slate-800/80 hover:border-sky-500/30 transition-all shadow-sm">
+                    <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-sky-500/10 text-sky-400 flex items-center justify-center font-bold text-sm sm:text-base mb-1.5 sm:mb-2">⚡</div>
+                    <h2 class="text-[11px] sm:text-xs font-bold text-white">&lt; 2 ms Latencia</h2>
+                    <p class="text-[10px] sm:text-[11px] text-slate-400 mt-0.5 leading-snug">Respuestas locales en memoria y SQLite WAL.</p>
                 </div>
-                <div class="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 hover:border-emerald-500/30 hover:-translate-y-0.5 transition-all duration-200 shadow-sm">
-                    <div class="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold text-base mb-2">🏦</div>
-                    <h2 class="text-xs font-bold text-white">Desglose Bancario</h2>
-                    <p class="text-[11px] text-slate-400 mt-0.5 leading-snug">Unión, BISA, BNB, Mercantil, Banco Sol y más.</p>
+                <div class="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-slate-900/60 border border-slate-800/80 hover:border-emerald-500/30 transition-all shadow-sm">
+                    <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold text-sm sm:text-base mb-1.5 sm:mb-2">🏦</div>
+                    <h2 class="text-[11px] sm:text-xs font-bold text-white">Desglose Bancario</h2>
+                    <p class="text-[10px] sm:text-[11px] text-slate-400 mt-0.5 leading-snug">Unión, BISA, BNB, Mercantil, Sol y más.</p>
                 </div>
-                <div class="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 hover:border-indigo-500/30 hover:-translate-y-0.5 transition-all duration-200 shadow-sm">
-                    <div class="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center font-bold text-base mb-2">🛡️</div>
-                    <h2 class="text-xs font-bold text-white">Alta Resiliencia</h2>
-                    <p class="text-[11px] text-slate-400 mt-0.5 leading-snug">Sin saturar Binance. Polling desacoplado en segundo plano.</p>
+                <div class="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-slate-900/60 border border-slate-800/80 hover:border-indigo-500/30 transition-all shadow-sm">
+                    <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center font-bold text-sm sm:text-base mb-1.5 sm:mb-2">🛡️</div>
+                    <h2 class="text-[11px] sm:text-xs font-bold text-white">Alta Resiliencia</h2>
+                    <p class="text-[10px] sm:text-[11px] text-slate-400 mt-0.5 leading-snug">Sin saturar Binance. Polling desacoplado.</p>
                 </div>
-                <div class="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 hover:border-amber-500/30 hover:-translate-y-0.5 transition-all duration-200 shadow-sm">
-                    <div class="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center font-bold text-base mb-2">✨</div>
-                    <h2 class="text-xs font-bold text-white">100% Gratuito</h2>
-                    <p class="text-[11px] text-slate-400 mt-0.5 leading-snug">Genera tu llave y empieza a programar en 5 segundos.</p>
+                <div class="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-slate-900/60 border border-slate-800/80 hover:border-amber-500/30 transition-all shadow-sm">
+                    <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center font-bold text-sm sm:text-base mb-1.5 sm:mb-2">✨</div>
+                    <h2 class="text-[11px] sm:text-xs font-bold text-white">100% Gratuito</h2>
+                    <p class="text-[10px] sm:text-[11px] text-slate-400 mt-0.5 leading-snug">Genera tu llave y empieza en 5 segundos.</p>
                 </div>
             </div>
         </div>
     </section>
 
     <!-- Main Container -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-16">
+    <div class="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-12 sm:space-y-16">
 
         <!-- SECTION 1: Self-Service Key Generator Card -->
-        <section id="obtener-key" class="max-w-3xl mx-auto scroll-mt-24">
-            <div class="bg-gradient-to-b from-slate-900/90 to-slate-900/50 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden backdrop-blur-sm">
+        <section id="obtener-key" class="max-w-3xl mx-auto scroll-mt-20">
+            <div class="bg-gradient-to-b from-slate-900/90 to-slate-900/50 border border-slate-800 rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 shadow-2xl relative overflow-hidden backdrop-blur-sm">
                 <div class="absolute -right-12 -top-12 w-48 h-48 bg-sky-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
-                <div class="flex items-start justify-between gap-4 mb-6">
+                <div class="flex items-start justify-between gap-3 mb-4 sm:mb-6">
                     <div>
-                        <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 mb-2">
+                        <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 mb-2">
                             <span>Plan Gratuito para Desarrolladores</span>
                         </div>
-                        <h2 class="text-xl sm:text-2xl font-black text-white tracking-tight">Crea tu API Key de Acceso</h2>
+                        <h2 class="text-lg sm:text-2xl font-black text-white tracking-tight">Crea tu API Key de Acceso</h2>
                         <p class="text-xs text-slate-400 mt-1 leading-relaxed">
-                            Sin tarjetas ni registros engorrosos. Asignamos inmediatamente <strong class="text-slate-200">10 peticiones/minuto</strong> por cada clave para cuidar los recursos de nuestro servidor.
+                            Sin tarjetas ni registros engorrosos. Asignamos inmediatamente <strong class="text-slate-200">10 RPM</strong> por cada clave para cuidar los recursos del servidor.
                         </p>
                     </div>
-                    <span class="text-3xl hidden sm:block p-3 rounded-2xl bg-slate-800/60 border border-slate-700/60">🔑</span>
+                    <span class="text-2xl sm:text-3xl hidden xs:block p-2.5 sm:p-3 rounded-2xl bg-slate-800/60 border border-slate-700/60 shrink-0">🔑</span>
                 </div>
 
                 <!-- HTMX Form for Key Generation -->
@@ -237,64 +240,64 @@
                       hx-post="/portal/keys"
                       hx-target="#public-key-target"
                       hx-swap="innerHTML"
-                      class="space-y-4">
+                      class="space-y-3.5">
                     <div>
                         <label class="block text-xs font-semibold text-slate-300 mb-1.5">
-                            Nombre de tu Aplicación, Bot o Proyecto:
+                            Nombre de tu Aplicación o Bot:
                         </label>
-                        <div class="flex flex-col sm:flex-row gap-2.5">
+                        <div class="flex flex-col sm:flex-row gap-2">
                             <input type="text" name="clientName" required
-                                   placeholder="Ej: TelegramAlertBot, AppFinanzas, CarlosDev"
+                                   placeholder="Ej: TelegramAlertBot, AppFinanzas"
                                    maxlength="40"
                                    pattern="^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ _.-]{2,40}$"
                                    title="Entre 2 y 40 caracteres alfanuméricos"
-                                   class="flex-1 bg-slate-950/80 border border-slate-700 rounded-xl text-sm text-white px-4 py-2.5 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 focus:outline-none transition">
+                                   class="flex-1 bg-slate-950/80 border border-slate-700 rounded-xl text-base sm:text-sm text-white px-4 py-2.5 sm:py-3 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 focus:outline-none transition">
                             <button type="submit"
-                                    class="py-2.5 px-6 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-sm rounded-xl transition shadow-lg shadow-emerald-600/20 active:scale-95 flex items-center justify-center gap-2 shrink-0">
+                                    class="w-full sm:w-auto py-3 px-6 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-sm rounded-xl transition shadow-lg shadow-emerald-600/20 active:scale-95 flex items-center justify-center gap-2 shrink-0">
                                 <span>Generar API Key</span>
                                 <span class="htmx-indicator animate-spin">⟳</span>
                             </button>
                         </div>
-                        <div class="flex items-center gap-2 text-[11px] text-slate-500 mt-2">
+                        <div class="flex items-center gap-1.5 text-[10px] sm:text-[11px] text-slate-500 mt-2">
                             <span>🛡️</span>
-                            <span>Protección anti-abuso: Máximo 5 llaves por hora por dirección IP.</span>
+                            <span>Máximo 5 llaves por hora por IP para prevenir abusos.</span>
                         </div>
                     </div>
                 </form>
 
                 <!-- Target Container for the Result fragment -->
-                <div id="public-key-target" class="mt-5"></div>
+                <div id="public-key-target" class="mt-4 sm:mt-5"></div>
             </div>
         </section>
 
         <!-- SECTION 2: Live Interactive API Playground -->
-        <section id="playground" class="scroll-mt-24">
-            <div class="bg-slate-900/80 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl backdrop-blur-sm">
+        <section id="playground" class="scroll-mt-20">
+            <div class="bg-slate-900/80 border border-slate-800 rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 shadow-xl backdrop-blur-sm">
                 
-                <!-- Playground Title Bar (macOS style dots) -->
-                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-5 border-b border-slate-800">
-                    <div class="flex items-center gap-3">
-                        <div class="flex items-center gap-1.5 px-1">
+                <!-- Playground Title Bar -->
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-6 pb-4 sm:pb-5 border-b border-slate-800">
+                    <div class="flex items-center gap-2.5 sm:gap-3">
+                        <div class="hidden sm:flex items-center gap-1.5 px-1">
                             <span class="w-3 h-3 rounded-full bg-rose-500/80 inline-block"></span>
                             <span class="w-3 h-3 rounded-full bg-amber-500/80 inline-block"></span>
                             <span class="w-3 h-3 rounded-full bg-emerald-500/80 inline-block"></span>
                         </div>
                         <div>
-                            <h2 class="text-xl font-black text-white tracking-tight flex items-center gap-2">
+                            <h2 class="text-lg sm:text-xl font-black text-white tracking-tight flex items-center gap-2">
                                 <span>⚡ Playground en Vivo</span>
-                                <span class="text-[11px] font-semibold text-sky-400 bg-sky-500/10 px-2.5 py-0.5 rounded-full border border-sky-500/20">Consola Interactiva</span>
+                                <span class="text-[10px] sm:text-[11px] font-semibold text-sky-400 bg-sky-500/10 px-2 py-0.5 rounded-full border border-sky-500/20">Consola</span>
                             </h2>
-                            <p class="text-xs text-slate-400 mt-0.5">Prueba los endpoints en tiempo real enviando peticiones directamente desde tu navegador.</p>
+                            <p class="text-xs text-slate-400 mt-0.5">Prueba los endpoints en tiempo real enviando peticiones desde tu navegador.</p>
                         </div>
                     </div>
                 </div>
 
-                <!-- Playground Controls -->
-                <div class="grid grid-cols-1 md:grid-cols-12 gap-3.5 mb-4">
+                <!-- Playground Controls (Stacks nicely on phones) -->
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-3 mb-4">
                     <div class="md:col-span-4">
-                        <label class="block text-[11px] font-semibold text-slate-400 mb-1.5">Método & Endpoint</label>
+                        <label class="block text-[11px] font-semibold text-slate-400 mb-1">Método & Endpoint</label>
                         <select id="playgroundEndpoint" 
-                                class="w-full bg-slate-950 border border-slate-700/80 rounded-xl text-xs sm:text-sm text-white px-3 py-2.5 focus:border-sky-500 focus:outline-none font-mono">
+                                class="w-full bg-slate-950 border border-slate-700/80 rounded-xl text-base sm:text-sm text-white px-3 py-2.5 sm:py-3 focus:border-sky-500 focus:outline-none font-mono">
                             <option value="/api/v1/rates/latest">GET /api/v1/rates/latest</option>
                             <option value="/api/v1/rates/buy">GET /api/v1/rates/buy</option>
                             <option value="/api/v1/rates/sell">GET /api/v1/rates/sell</option>
@@ -305,20 +308,18 @@
                     </div>
 
                     <div class="md:col-span-5">
-                        <label class="block text-[11px] font-semibold text-slate-400 mb-1.5">
-                            Tu API Key (o usa la clave demo predeterminada)
+                        <label class="block text-[11px] font-semibold text-slate-400 mb-1">
+                            Tu API Key
                         </label>
-                        <div class="relative">
-                            <input type="text" id="playgroundApiKey"
-                                   th:value="${defaultDemoKey}"
-                                   placeholder="bolivia_live_..."
-                                   class="w-full bg-slate-950 border border-slate-700/80 rounded-xl text-xs sm:text-sm text-emerald-400 px-3.5 py-2.5 focus:border-sky-500 focus:ring-1 focus:ring-sky-500/30 focus:outline-none font-mono">
-                        </div>
+                        <input type="text" id="playgroundApiKey"
+                               th:value="${defaultDemoKey}"
+                               placeholder="bolivia_live_..."
+                               class="w-full bg-slate-950 border border-slate-700/80 rounded-xl text-base sm:text-sm text-emerald-400 px-3.5 py-2.5 sm:py-3 focus:border-sky-500 focus:ring-1 focus:ring-sky-500/30 focus:outline-none font-mono">
                     </div>
 
                     <div class="md:col-span-3 flex items-end">
                         <button type="button" onclick="executePlaygroundRequest()"
-                                class="w-full py-2.5 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-sm rounded-xl transition shadow shadow-blue-600/30 active:scale-95 flex items-center justify-center gap-2">
+                                class="w-full py-2.5 sm:py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-sm rounded-xl transition shadow shadow-blue-600/30 active:scale-95 flex items-center justify-center gap-2">
                             <span>Enviar Petición</span>
                             <span id="playgroundSpinner" class="hidden animate-spin">⟳</span>
                         </button>
@@ -326,21 +327,21 @@
                 </div>
 
                 <!-- Playground Output Box -->
-                <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4 font-mono text-xs overflow-hidden shadow-inner">
-                    <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-800/80 text-[11px]">
-                        <div class="flex items-center gap-2.5">
-                            <span class="text-slate-400">Estado HTTP:</span>
+                <div class="bg-slate-950 border border-slate-800 rounded-xl sm:rounded-2xl p-3 sm:p-4 font-mono text-xs overflow-hidden shadow-inner">
+                    <div class="flex items-center justify-between pb-2.5 mb-2.5 border-b border-slate-800/80 text-[11px] flex-wrap gap-2">
+                        <div class="flex items-center gap-2">
+                            <span class="text-slate-400">Estado:</span>
                             <span id="playgroundStatus" class="font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-300">--</span>
                             <span id="playgroundTime" class="text-slate-500 flex items-center gap-1 font-mono">
                                 <span>⚡</span> <span>0 ms</span>
                             </span>
                         </div>
                         <button type="button" onclick="copyPlaygroundJson()" 
-                                class="text-xs text-slate-400 hover:text-sky-300 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-lg transition flex items-center gap-1.5">
+                                class="text-xs text-slate-400 hover:text-sky-300 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-lg transition flex items-center gap-1.5 ml-auto">
                             <span id="copyJsonText">Copiar JSON</span>
                         </button>
                     </div>
-                    <pre id="playgroundOutput" class="text-slate-300 overflow-x-auto max-h-80 custom-scrollbar whitespace-pre leading-relaxed font-mono">{
+                    <pre id="playgroundOutput" class="text-slate-300 overflow-x-auto max-h-64 sm:max-h-80 custom-scrollbar whitespace-pre leading-relaxed font-mono text-[11px] sm:text-xs">{
   "mensaje": "Selecciona un endpoint y presiona 'Enviar Petición' para ver el JSON en tiempo real."
 }</pre>
                 </div>
@@ -348,87 +349,87 @@
         </section>
 
         <!-- SECTION 3: Detailed Wiki & Endpoints Documentation -->
-        <section id="wiki" class="scroll-mt-24 space-y-10">
-            <div class="border-b border-slate-800 pb-4">
-                <h2 class="text-2xl font-black text-white tracking-tight">📖 Wiki de la API & Documentación</h2>
-                <p class="text-xs sm:text-sm text-slate-400 mt-1">Guía técnica completa para integrar los servicios en Telegram, bots de Discord, Python, Node.js y más.</p>
+        <section id="wiki" class="scroll-mt-20 space-y-6 sm:space-y-10">
+            <div class="border-b border-slate-800 pb-3 sm:pb-4">
+                <h2 class="text-xl sm:text-2xl font-black text-white tracking-tight">📖 Wiki de la API & Documentación</h2>
+                <p class="text-xs sm:text-sm text-slate-400 mt-1">Guía técnica completa para integrar cotizaciones en Telegram, bots de Discord, Python, Node.js y más.</p>
             </div>
 
             <!-- 1. Authentication Concept -->
-            <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 space-y-4 backdrop-blur-sm">
-                <h3 class="text-base font-bold text-white flex items-center gap-2">
+            <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-6 space-y-3 sm:space-y-4 backdrop-blur-sm">
+                <h3 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
                     <span class="text-sky-400">#</span> Autenticación & Cabeceras HTTP
                 </h3>
                 <p class="text-xs text-slate-300 leading-relaxed">
-                    Todas las solicitudes a las rutas de tasas (<code class="text-emerald-400 font-mono">/api/v1/rates/*</code>) requieren una API Key activa. Puedes suministrarla mediante la cabecera estándar (recomendada) o mediante parámetro de consulta:
+                    Todas las solicitudes a las rutas de tasas (<code class="text-emerald-400 font-mono">/api/v1/rates/*</code>) requieren una API Key activa:
                 </p>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono">
-                    <div class="bg-slate-950 border border-slate-800/90 rounded-xl p-3.5 space-y-1">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-4 text-xs font-mono">
+                    <div class="bg-slate-950 border border-slate-800/90 rounded-xl p-3 space-y-1">
                         <span class="text-[10px] text-slate-500 font-sans uppercase font-bold tracking-wider">Opción 1: Cabecera HTTP (Recomendada)</span>
-                        <div class="text-sky-300 font-semibold">X-API-Key: bolivia_live_TU_CLAVE</div>
+                        <div class="text-sky-300 font-semibold break-all">X-API-Key: bolivia_live_TU_CLAVE</div>
                     </div>
-                    <div class="bg-slate-950 border border-slate-800/90 rounded-xl p-3.5 space-y-1">
-                        <span class="text-[10px] text-slate-500 font-sans uppercase font-bold tracking-wider">Opción 2: Parámetro de Consulta (Query Param)</span>
-                        <div class="text-emerald-300 font-semibold">?apiKey=bolivia_live_TU_CLAVE</div>
+                    <div class="bg-slate-950 border border-slate-800/90 rounded-xl p-3 space-y-1">
+                        <span class="text-[10px] text-slate-500 font-sans uppercase font-bold tracking-wider">Opción 2: Parámetro de Consulta</span>
+                        <div class="text-emerald-300 font-semibold break-all">?apiKey=bolivia_live_TU_CLAVE</div>
                     </div>
                 </div>
 
-                <div class="p-3 bg-slate-950/60 border border-slate-800 rounded-xl text-xs text-slate-300 flex items-start gap-2.5">
-                    <span class="text-amber-400 text-sm">ℹ️</span>
+                <div class="p-3 bg-slate-950/60 border border-slate-800 rounded-xl text-xs text-slate-300 flex items-start gap-2.5 leading-relaxed">
+                    <span class="text-amber-400 text-sm shrink-0">ℹ️</span>
                     <div>
-                        <strong class="text-white">Rate Limiting (Control de Cuota):</strong>
-                        El nivel gratuito asigna <strong class="text-sky-400">10 peticiones por minuto (RPM)</strong> por cada llave. Si se supera la cuota en una ventana de 60 segundos, la API responderá con el código <code class="text-rose-400 font-mono">429 Too Many Requests</code>.
+                        <strong class="text-white">Control de Cuota:</strong>
+                        El plan libre asigna <strong class="text-sky-400">10 RPM</strong>. Exceder la cuota retorna código <code class="text-rose-400 font-mono">429 Too Many Requests</code>.
                     </div>
                 </div>
             </div>
 
             <!-- 2. Endpoint: GET /api/v1/rates/latest -->
-            <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 space-y-5 backdrop-blur-sm">
+            <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-6 space-y-4 backdrop-blur-sm">
                 <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
-                    <div class="flex items-center gap-2.5">
-                        <span class="px-2.5 py-1 rounded bg-sky-500/20 text-sky-400 font-mono text-xs font-bold border border-sky-500/30">GET</span>
-                        <span class="font-mono text-sm sm:text-base font-bold text-white">/api/v1/rates/latest</span>
+                    <div class="flex items-center gap-2">
+                        <span class="px-2 py-0.5 rounded bg-sky-500/20 text-sky-400 font-mono text-xs font-bold border border-sky-500/30">GET</span>
+                        <span class="font-mono text-xs sm:text-base font-bold text-white break-all">/api/v1/rates/latest</span>
                     </div>
-                    <span class="text-xs text-slate-400">Tasas consolidadas + desglose bancario nacional</span>
+                    <span class="text-[11px] sm:text-xs text-slate-400">Tasas consolidadas + bancos</span>
                 </div>
 
                 <p class="text-xs text-slate-300 leading-relaxed">
-                    Retorna el snapshot de mercado más reciente con el promedio general ponderado, margen de spread y la cotización específica de cada entidad financiera boliviana (Banco Unión, BISA, Banco Mercantil Santa Cruz, BNB, Banco Sol, Banco Ganadero, etc.).
+                    Retorna el snapshot de mercado con el promedio ponderado, margen de spread y la cotización específica de cada entidad financiera boliviana (Banco Unión, BISA, BNB, Mercantil, Sol, etc.).
                 </p>
 
                 <!-- Interactive Code Snippets Tabs -->
                 <div class="space-y-2">
-                    <div class="flex items-center justify-between text-xs">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
                         <!-- Language Switcher Tabs -->
-                        <div class="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
+                        <div class="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 overflow-x-auto w-full sm:w-auto">
                             <button type="button" onclick="switchCodeTab('curl')" id="tab-curl" 
-                                    class="px-3 py-1 rounded-lg text-xs font-semibold bg-slate-800 text-white transition">
+                                    class="flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-white transition text-center">
                                 cURL
                             </button>
                             <button type="button" onclick="switchCodeTab('js')" id="tab-js" 
-                                    class="px-3 py-1 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition">
+                                    class="flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition text-center">
                                 JavaScript
                             </button>
                             <button type="button" onclick="switchCodeTab('py')" id="tab-py" 
-                                    class="px-3 py-1 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition">
+                                    class="flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition text-center">
                                 Python
                             </button>
                         </div>
                         <button type="button" onclick="copyCurrentCodeSnippet()" 
-                                class="text-xs text-slate-400 hover:text-white flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700/80 transition">
+                                class="self-end sm:self-auto text-xs text-slate-400 hover:text-white flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800 border border-slate-700/80 transition">
                             <span id="copySnippetText">Copiar código</span>
                         </button>
                     </div>
 
                     <!-- cURL Tab Content -->
-                    <div id="content-curl" class="bg-slate-950 border border-slate-800 rounded-xl p-3.5 font-mono text-xs text-slate-300 overflow-x-auto">
+                    <div id="content-curl" class="bg-slate-950 border border-slate-800 rounded-xl p-3 sm:p-3.5 font-mono text-[11px] sm:text-xs text-slate-300 overflow-x-auto custom-scrollbar">
                         <span class="text-slate-500 block mb-1"># Terminal / Bash</span>
                         <code id="snippet-curl">curl -H "X-API-Key: bolivia_live_..." <span class="base-url-text" th:text="${baseUrl}">http://155.181.158.36:8080</span>/api/v1/rates/latest</code>
                     </div>
 
                     <!-- JS Tab Content -->
-                    <div id="content-js" class="hidden bg-slate-950 border border-slate-800 rounded-xl p-3.5 font-mono text-xs text-slate-300 overflow-x-auto leading-relaxed">
+                    <div id="content-js" class="hidden bg-slate-950 border border-slate-800 rounded-xl p-3 sm:p-3.5 font-mono text-[11px] sm:text-xs text-slate-300 overflow-x-auto custom-scrollbar leading-relaxed">
                         <span class="text-slate-500 block mb-1">// JavaScript (Node.js / Navegador)</span>
                         <code id="snippet-js">const res = await fetch('<span class="base-url-text" th:text="${baseUrl}">http://155.181.158.36:8080</span>/api/v1/rates/latest', {
   headers: { 'X-API-Key': 'bolivia_live_...' }
@@ -438,7 +439,7 @@ console.log('Compra USDT:', data.buyMarket.referencePrice, 'Venta USDT:', data.s
                     </div>
 
                     <!-- Python Tab Content -->
-                    <div id="content-py" class="hidden bg-slate-950 border border-slate-800 rounded-xl p-3.5 font-mono text-xs text-slate-300 overflow-x-auto leading-relaxed">
+                    <div id="content-py" class="hidden bg-slate-950 border border-slate-800 rounded-xl p-3 sm:p-3.5 font-mono text-[11px] sm:text-xs text-slate-300 overflow-x-auto custom-scrollbar leading-relaxed">
                         <span class="text-slate-500 block mb-1"># Python 3 (requests)</span>
                         <code id="snippet-py">import requests
 
@@ -450,9 +451,9 @@ print("Compra:", data['buyMarket']['referencePrice'], "Venta:", data['sellMarket
                 </div>
 
                 <!-- Example Response JSON -->
-                <div class="space-y-1.5 pt-2">
-                    <span class="text-xs font-semibold text-slate-400">Ejemplo de Respuesta JSON (200 OK):</span>
-                    <pre class="bg-slate-950 border border-slate-800 rounded-xl p-4 font-mono text-xs text-emerald-400/90 overflow-x-auto leading-relaxed max-h-72 custom-scrollbar">{
+                <div class="space-y-1.5 pt-1">
+                    <span class="text-[11px] sm:text-xs font-semibold text-slate-400">Ejemplo de Respuesta JSON (200 OK):</span>
+                    <pre class="bg-slate-950 border border-slate-800 rounded-xl p-3 sm:p-4 font-mono text-[11px] sm:text-xs text-emerald-400/90 overflow-x-auto leading-relaxed max-h-60 sm:max-h-72 custom-scrollbar">{
   "globalBuyRate": 12.00,
   "globalSellRate": 11.95,
   "spread": 0.05,
@@ -476,58 +477,58 @@ print("Compra:", data['buyMarket']['referencePrice'], "Venta:", data['sellMarket
                 </div>
             </div>
 
-            <!-- 3. Other Endpoints Summary Cards -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- 3. Other Endpoints Summary Cards (Stacks on mobile) -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5 sm:gap-4">
                 <!-- Endpoint Buy -->
-                <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 space-y-3 backdrop-blur-sm">
+                <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-2.5 backdrop-blur-sm">
                     <div class="flex items-center gap-2">
                         <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-mono text-xs font-bold border border-emerald-500/30">GET</span>
                         <span class="font-mono text-xs font-bold text-white">/api/v1/rates/buy</span>
                     </div>
                     <p class="text-xs text-slate-400 leading-relaxed">
-                        Lista detallada de las mejores ofertas activas de compra (usuarios que compran USDT pagando con BOB). Incluye límites y métodos de pago.
+                        Lista detallada de ofertas activas de compra (quienes compran USDT pagando en BOB). Límites y bancos.
                     </p>
-                    <div class="font-mono text-[11px] text-slate-400 bg-slate-950 p-2.5 rounded-xl border border-slate-800/80 truncate">
+                    <div class="font-mono text-[10px] sm:text-[11px] text-slate-400 bg-slate-950 p-2.5 rounded-xl border border-slate-800/80 truncate">
                         <code>curl -H "X-API-Key: ..." <span class="base-url-text" th:text="${baseUrl}">http://155.181.158.36:8080</span>/api/v1/rates/buy</code>
                     </div>
                 </div>
 
                 <!-- Endpoint Sell -->
-                <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 space-y-3 backdrop-blur-sm">
+                <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-2.5 backdrop-blur-sm">
                     <div class="flex items-center gap-2">
                         <span class="px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 font-mono text-xs font-bold border border-rose-500/30">GET</span>
                         <span class="font-mono text-xs font-bold text-white">/api/v1/rates/sell</span>
                     </div>
                     <p class="text-xs text-slate-400 leading-relaxed">
-                        Lista detallada de ofertas activas de venta (usuarios que venden USDT a cambio de BOB). Ideal para conocer el precio real de salida.
+                        Lista detallada de ofertas activas de venta (quienes venden USDT recibiendo BOB). Precio de salida.
                     </p>
-                    <div class="font-mono text-[11px] text-slate-400 bg-slate-950 p-2.5 rounded-xl border border-slate-800/80 truncate">
+                    <div class="font-mono text-[10px] sm:text-[11px] text-slate-400 bg-slate-950 p-2.5 rounded-xl border border-slate-800/80 truncate">
                         <code>curl -H "X-API-Key: ..." <span class="base-url-text" th:text="${baseUrl}">http://155.181.158.36:8080</span>/api/v1/rates/sell</code>
                     </div>
                 </div>
 
                 <!-- Endpoint History -->
-                <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 space-y-3 backdrop-blur-sm">
+                <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-2.5 backdrop-blur-sm">
                     <div class="flex items-center gap-2">
                         <span class="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-400 font-mono text-xs font-bold border border-indigo-500/30">GET</span>
                         <span class="font-mono text-xs font-bold text-white">/api/v1/rates/history</span>
                     </div>
                     <p class="text-xs text-slate-400 leading-relaxed">
-                        Serie histórica de cotizaciones guardadas en SQLite para análisis de tendencias, gráficas financieras o backtesting de algoritmos.
+                        Serie histórica de cotizaciones guardadas en SQLite para análisis de tendencias y backtesting.
                     </p>
-                    <div class="font-mono text-[11px] text-slate-400 bg-slate-950 p-2.5 rounded-xl border border-slate-800/80 truncate">
+                    <div class="font-mono text-[10px] sm:text-[11px] text-slate-400 bg-slate-950 p-2.5 rounded-xl border border-slate-800/80 truncate">
                         <code>curl -H "X-API-Key: ..." <span class="base-url-text" th:text="${baseUrl}">http://155.181.158.36:8080</span>/api/v1/rates/history</code>
                     </div>
                 </div>
             </div>
 
-            <!-- 4. HTTP Codes Table -->
-            <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 space-y-4 backdrop-blur-sm">
+            <!-- 4. HTTP Codes Table (Horizontally Scrollable on Mobile) -->
+            <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-6 space-y-3 sm:space-y-4 backdrop-blur-sm">
                 <h3 class="text-sm font-bold text-white flex items-center gap-2">
-                    <span class="text-sky-400">#</span> Códigos de Estado HTTP de la API
+                    <span class="text-sky-400">#</span> Códigos de Estado HTTP
                 </h3>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left text-xs">
+                <div class="overflow-x-auto -mx-1 sm:mx-0">
+                    <table class="w-full text-left text-xs min-w-[460px]">
                         <thead>
                             <tr class="border-b border-slate-800 text-slate-400">
                                 <th class="pb-2.5 font-semibold">Código</th>
@@ -537,22 +538,22 @@ print("Compra:", data['buyMarket']['referencePrice'], "Venta:", data['sellMarket
                         </thead>
                         <tbody class="divide-y divide-slate-800/60 font-mono">
                             <tr>
-                                <td class="py-2.5 text-emerald-400 font-bold">200 OK</td>
+                                <td class="py-2.5 text-emerald-400 font-bold whitespace-nowrap">200 OK</td>
                                 <td class="py-2.5 text-slate-200 font-sans font-medium">Petición exitosa</td>
-                                <td class="py-2.5 text-slate-400 font-sans">Retorna el objeto JSON con las cotizaciones actualizadas.</td>
+                                <td class="py-2.5 text-slate-400 font-sans">Retorna el objeto JSON con las cotizaciones.</td>
                             </tr>
                             <tr>
-                                <td class="py-2.5 text-amber-400 font-bold">401 Unauthorized</td>
+                                <td class="py-2.5 text-amber-400 font-bold whitespace-nowrap">401 Unauthorized</td>
                                 <td class="py-2.5 text-slate-200 font-sans font-medium">No autorizado</td>
-                                <td class="py-2.5 text-slate-400 font-sans">Falta la cabecera `X-API-Key` o la clave no existe o está desactivada.</td>
+                                <td class="py-2.5 text-slate-400 font-sans">Falta `X-API-Key` o la clave no existe o está pausada.</td>
                             </tr>
                             <tr>
-                                <td class="py-2.5 text-rose-400 font-bold">429 Too Many Requests</td>
+                                <td class="py-2.5 text-rose-400 font-bold whitespace-nowrap">429 Too Many Requests</td>
                                 <td class="py-2.5 text-slate-200 font-sans font-medium">Límite excedido</td>
-                                <td class="py-2.5 text-slate-400 font-sans">Se superaron las 10 peticiones en la ventana de 1 minuto.</td>
+                                <td class="py-2.5 text-slate-400 font-sans">Superaste las 10 peticiones en 1 minuto.</td>
                             </tr>
                             <tr>
-                                <td class="py-2.5 text-slate-400 font-bold">500 Server Error</td>
+                                <td class="py-2.5 text-slate-400 font-bold whitespace-nowrap">500 Server Error</td>
                                 <td class="py-2.5 text-slate-200 font-sans font-medium">Error interno</td>
                                 <td class="py-2.5 text-slate-400 font-sans">Excepción no controlada en el servicio.</td>
                             </tr>
@@ -564,16 +565,16 @@ print("Compra:", data['buyMarket']['referencePrice'], "Venta:", data['sellMarket
     </div>
 
     <!-- Footer -->
-    <footer class="border-t border-slate-900 bg-slate-950 py-10 text-center text-xs text-slate-500 space-y-3">
+    <footer class="border-t border-slate-900 bg-slate-950 py-8 sm:py-10 text-center text-xs text-slate-500 space-y-3 px-4">
         <div class="flex items-center justify-center gap-2 text-slate-400 font-medium">
             <span>🇧🇴 Bolivia P2P Rates Monitor</span>
             <span>&bull;</span>
-            <span>Arquitectura Oracle Always Free</span>
+            <span>Oracle Always Free</span>
         </div>
-        <div class="flex flex-wrap items-center justify-center gap-2 text-[11px] text-slate-600">
+        <div class="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 text-[10px] sm:text-[11px] text-slate-600">
             <span class="px-2 py-0.5 rounded bg-slate-900 border border-slate-800">Java 25</span>
             <span class="px-2 py-0.5 rounded bg-slate-900 border border-slate-800">Javalin 7</span>
-            <span class="px-2 py-0.5 rounded bg-slate-900 border border-slate-800">Caddy 2.11 HTTPS</span>
+            <span class="px-2 py-0.5 rounded bg-slate-900 border border-slate-800">Caddy HTTPS</span>
             <span class="px-2 py-0.5 rounded bg-slate-900 border border-slate-800">SQLite WAL</span>
             <span class="px-2 py-0.5 rounded bg-slate-900 border border-slate-800">HTMX 2.0</span>
         </div>
@@ -604,10 +605,10 @@ print("Compra:", data['buyMarket']['referencePrice'], "Venta:", data['sellMarket
                 const tabBtn = document.getElementById('tab-' + t);
                 const contentEl = document.getElementById('content-' + t);
                 if (t === lang) {
-                    tabBtn.className = 'px-3 py-1 rounded-lg text-xs font-semibold bg-slate-800 text-white transition';
+                    tabBtn.className = 'flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-white transition text-center';
                     contentEl.classList.remove('hidden');
                 } else {
-                    tabBtn.className = 'px-3 py-1 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition';
+                    tabBtn.className = 'flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition text-center';
                     contentEl.classList.add('hidden');
                 }
             });
