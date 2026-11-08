@@ -64,4 +64,18 @@ class OracleDatabaseManagerTest {
             }
         }
     }
+
+    @Test
+    void shouldInitializeOraclePoolWithoutFailingImmediately() {
+        AppConfig config = new AppConfig(
+                8080, 600, 60, 10, "BOB", "USDT", "database/rates.db", "",
+                true, "jdbc:oracle:thin:@francodb_low", "BOLIVIA_P2P", "secret", "/tmp/fake_wallet", 1, 60, 25, 100
+        );
+
+        try (OracleDatabaseManager manager = new OracleDatabaseManager(config)) {
+            assertTrue(manager.isEnabled());
+            assertEquals(0, manager.getActiveConnections());
+            assertEquals(0, manager.getIdleConnections());
+        }
+    }
 }

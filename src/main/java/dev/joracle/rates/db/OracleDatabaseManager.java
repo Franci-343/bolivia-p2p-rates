@@ -38,6 +38,7 @@ public class OracleDatabaseManager implements AutoCloseable {
 
         HikariConfig hikariConfig = new HikariConfig();
         hikariConfig.setPoolName("OracleSyncPool");
+        hikariConfig.setDriverClassName("oracle.jdbc.OracleDriver");
         hikariConfig.setUsername(config.oracleDbUser());
         hikariConfig.setPassword(config.oracleDbPassword());
 
